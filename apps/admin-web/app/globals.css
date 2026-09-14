@@ -1,0 +1,31 @@
+:root {
+  --color-background: #f2f0e6;
+  --color-surface: #fbfaf6;
+  --color-text-primary: #20241e;
+  --color-text-secondary: #5b6157;
+  --color-accent: #465c3e;
+  --color-accent-strong: #2e3e29;
+  --color-border: #deddac;
+
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body: "Work Sans", "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  margin: 0;
+}

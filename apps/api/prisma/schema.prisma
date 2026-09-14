@@ -1,0 +1,46 @@
+// Minimal M0 schema: only what auth + profile skeleton needs.
+// Menu, orders, payments, inventory etc. are added in later milestones.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  customer
+  staff
+  admin
+  gym_partner
+  corporate_admin
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(customer)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile CustomerProfile?
+
+  @@map("users")
+}
+
+model CustomerProfile {
+  userId         String   @id
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  age            Int?
+  gender         String?
+  heightCm       Int?
+  weightKg       Float?
+  activityLevel  String?
+  goal           String?
+  updatedAt      DateTime @updatedAt
+
+  @@map("customer_profiles")
+}

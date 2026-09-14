@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "Food App",
+    "slug": "food-app",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {},
+    "extra": {
+      "note": "Placeholder config for M0. Icons, splash screen and bundle identifiers are set once brand assets exist."
+    }
+  }
+}

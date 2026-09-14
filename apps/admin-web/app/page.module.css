@@ -1,0 +1,43 @@
+.shell {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+.eyebrow {
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.title {
+  font-size: 32px;
+  margin-top: 8px;
+}
+
+.lead {
+  color: var(--color-text-secondary);
+  margin-top: 12px;
+  line-height: 1.5;
+}
+
+.moduleList {
+  margin-top: 40px;
+  border-top: 1px solid var(--color-border);
+}
+
+.moduleRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.status {
+  font-size: 13px;
+  color: var(--color-accent-strong);
+  background: var(--color-accent-soft, #dde5d3);
+  padding: 2px 10px;
+  border-radius: 999px;
+}
