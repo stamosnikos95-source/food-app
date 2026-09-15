@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
+import { UpdateProfileDto } from "./dto/update-profile.dto";
 
 @Injectable()
 export class UsersService {
@@ -16,5 +17,35 @@ export class UsersService {
     }
 
     return user;
+  }
+
+  async getProfile(userId: string) {
+    const profile = await this.prisma.customerProfile.findUnique({
+      where: { userId },
+    });
+
+    // No profile yet is a normal state right after registration, not an error.
+    return (
+      profile ?? {
+        userId,
+        age: null,
+        gender: null,
+        heightCm: null,
+        weightKg: null,
+        activityLevel: null,
+        goal: null,
+        budgetPerMealCents: null,
+        dietaryPreferences: [] as string[],
+        excludedIngredients: [] as string[],
+      }
+    );
+  }
+
+  async upsertProfile(userId: string, dto: UpdateProfileDto) {
+    return this.prisma.customerProfile.upsert({
+      where: { userId },
+      create: { userId, ...dto },
+      update: { ...dto },
+    });
   }
 }

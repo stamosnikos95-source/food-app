@@ -32,15 +32,18 @@ model User {
 }
 
 model CustomerProfile {
-  userId         String   @id
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  age            Int?
-  gender         String?
-  heightCm       Int?
-  weightKg       Float?
-  activityLevel  String?
-  goal           String?
-  updatedAt      DateTime @updatedAt
+  userId              String   @id
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  age                 Int?
+  gender              String?
+  heightCm            Int?
+  weightKg            Float?
+  activityLevel       String?
+  goal                String?
+  budgetPerMealCents  Int?
+  dietaryPreferences  String[] @default([])
+  excludedIngredients String[] @default([])
+  updatedAt           DateTime @updatedAt
 
   @@map("customer_profiles")
 }
