@@ -27,6 +27,7 @@ model User {
   updatedAt    DateTime @updatedAt
 
   profile CustomerProfile?
+  orders  Order[]
 
   @@map("users")
 }
@@ -46,4 +47,58 @@ model CustomerProfile {
   updatedAt           DateTime @updatedAt
 
   @@map("customer_profiles")
+}
+
+model MenuItem {
+  id             String   @id @default(uuid())
+  name           String
+  description    String?
+  priceCents     Int
+  portionWeightG Int
+  calories       Int
+  proteinG       Float
+  carbsG         Float
+  fatG           Float
+  imageUrl       String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  orderItems OrderItem[]
+
+  @@map("menu_items")
+}
+
+enum OrderStatus {
+  pending
+  confirmed
+  ready
+  completed
+  cancelled
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  status          OrderStatus @default(pending)
+  totalPriceCents Int
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  items OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id             String   @id @default(uuid())
+  orderId        String
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId     String
+  menuItem       MenuItem @relation(fields: [menuItemId], references: [id])
+  quantity       Int
+  unitPriceCents Int
+
+  @@map("order_items")
 }
