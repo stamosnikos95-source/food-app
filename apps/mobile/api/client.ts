@@ -66,6 +66,36 @@ export interface Profile {
   excludedIngredients: string[];
 }
 
+export interface MenuItem {
+  id: string;
+  name: string;
+  description: string | null;
+  priceCents: number;
+  portionWeightG: number;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  imageUrl: string | null;
+  isActive: boolean;
+}
+
+export interface OrderItem {
+  id: string;
+  menuItemId: string;
+  quantity: number;
+  unitPriceCents: number;
+  menuItem: MenuItem;
+}
+
+export interface Order {
+  id: string;
+  status: "pending" | "confirmed" | "ready" | "completed" | "cancelled";
+  totalPriceCents: number;
+  createdAt: string;
+  items: OrderItem[];
+}
+
 export const api = {
   register: (email: string, password: string) =>
     request<TokenPair>("/auth/register", { method: "POST", body: { email, password } }),
@@ -78,4 +108,11 @@ export const api = {
 
   updateProfile: (accessToken: string, patch: Partial<Profile>) =>
     request<Profile>("/users/me/profile", { method: "PATCH", body: patch, accessToken }),
+
+  getMenu: (accessToken: string) => request<MenuItem[]>("/menu", { accessToken }),
+
+  createOrder: (accessToken: string, items: { menuItemId: string; quantity: number }[]) =>
+    request<Order>("/orders", { method: "POST", body: { items }, accessToken }),
+
+  getOrders: (accessToken: string) => request<Order[]>("/orders", { accessToken }),
 };

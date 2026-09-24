@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { StatusBar } from "expo-status-bar";
 import { theme } from "./theme";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
+import { CartProvider } from "./cart/CartContext";
 import { AuthGateScreen } from "./screens/AuthGateScreen";
 import { TodayScreen } from "./screens/TodayScreen";
 import { AssistantScreen } from "./screens/AssistantScreen";
@@ -52,7 +53,15 @@ function RootNavigator() {
   }
 
   return (
-    <NavigationContainer>{accessToken ? <MainTabs /> : <AuthGateScreen />}</NavigationContainer>
+    <NavigationContainer>
+      {accessToken ? (
+        <CartProvider>
+          <MainTabs />
+        </CartProvider>
+      ) : (
+        <AuthGateScreen />
+      )}
+    </NavigationContainer>
   );
 }
 
