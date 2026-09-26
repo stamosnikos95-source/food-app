@@ -90,6 +90,8 @@ model Order {
   items    OrderItem[]
   payments Payment[]
 
+  @@index([userId])
+
   @@map("orders")
 }
 
@@ -102,6 +104,8 @@ model OrderItem {
   quantity       Int
   unitPriceCents Int
 
+
+  @@index([orderId])
   @@map("order_items")
 }
 
@@ -135,7 +139,7 @@ enum PaymentStatus {
 model Payment {
   id          String        @id @default(uuid())
   orderId     String
-  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
   provider    String
   // Provider-side id (Stripe Checkout Session id). Null only in the short
   // window between creating this row and the provider call returning.

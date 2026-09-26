@@ -13,7 +13,8 @@ import { openCheckout } from "../checkout/openCheckout";
 import { theme } from "../theme";
 
 const STATUS: Record<Order["status"], { label: string; tone: "neutral" | "active" | "done" | "muted" }> = {
-  pending: { label: "Αναμονή πληρωμής", tone: "neutral" },
+  // Placed and unpaid: paid at pickup, unless the customer pays online first.
+  pending: { label: "Σε αναμονή", tone: "neutral" },
   confirmed: { label: "Ετοιμάζεται", tone: "active" },
   ready: { label: "Έτοιμη για παραλαβή", tone: "active" },
   completed: { label: "Παραλήφθηκε", tone: "done" },
@@ -31,7 +32,7 @@ export function OrdersScreen() {
   const { withAuth } = useAuth();
   const cart = useCart();
   const [history, setHistory] = useState<HistoryState>({ status: "loading" });
-  const [placing, setPlacing] = useState(false);
+  const [placing, setPlacing] = useState<"card" | "store" | null>(null);
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [paymentsEnabled, setPaymentsEnabled] = useState<boolean | null>(null);
@@ -104,7 +105,7 @@ export function OrdersScreen() {
   async function placeOrderAndPay() {
     if (cart.lines.length === 0) return;
     setCheckoutError(null);
-    setPlacing(true);
+    setPlacing("card");
     let orderId: string | null = null;
     try {
       const items = cart.lines.map((l) => ({ menuItemId: l.item.id, quantity: l.quantity }));
@@ -121,7 +122,33 @@ export function OrdersScreen() {
         }),
       );
       if (orderId) loadOrders();
-      setPlacing(false);
+      setPlacing(null);
+    }
+  }
+
+  /** Pay-at-pickup order: always available, with or without online payments. */
+  async function placeOrderPayAtStore() {
+    if (cart.lines.length === 0) return;
+    setCheckoutError(null);
+    setPlacing("store");
+    try {
+      const items = cart.lines.map((l) => ({ menuItemId: l.item.id, quantity: l.quantity }));
+      await withAuth((token) => api.createOrder(token, items));
+      cart.clear();
+      setBanner({
+        tone: "success",
+        title: "Η παραγγελία στάλθηκε",
+        message: "Θα πληρώσεις κατά την παραλαβή από το κατάστημα.",
+      });
+      loadOrders();
+    } catch (error) {
+      setCheckoutError(
+        describeError(error, {
+          400: "Κάποιο πιάτο δεν είναι πια διαθέσιμο. Αφαίρεσέ το και δοκίμασε ξανά.",
+        }),
+      );
+    } finally {
+      setPlacing(null);
     }
   }
 
@@ -167,20 +194,40 @@ export function OrdersScreen() {
               <Text style={styles.totalValue}>{formatPrice(cart.totalCents)}</Text>
             </View>
             <Text style={styles.pickupNote}>
-              Παραλαβή από το κατάστημα · ασφαλής πληρωμή με κάρτα μέσω Stripe
+              {paymentsEnabled
+                ? "Παραλαβή από το κατάστημα · πλήρωσε τώρα με κάρτα ή κατά την παραλαβή"
+                : "Παραλαβή από το κατάστημα · πληρωμή κατά την παραλαβή"}
             </Text>
             {checkoutError ? <Text style={styles.error}>{checkoutError}</Text> : null}
-            {paymentsEnabled === false ? (
-              <Text style={styles.error}>
-                Οι online πληρωμές δεν έχουν ενεργοποιηθεί ακόμα στο κατάστημα.
-              </Text>
-            ) : null}
-            <PrimaryButton
-              title={`Πληρωμή με κάρτα · ${formatPrice(cart.totalCents)}`}
-              onPress={placeOrderAndPay}
-              loading={placing}
-              disabled={paymentsEnabled !== true}
-            />
+            {/* Ordering never depends on online payments being configured:
+                without them (or while their status loads) pay-at-store is the
+                primary action; with them, card is primary and store secondary. */}
+            {paymentsEnabled ? (
+              <>
+                <PrimaryButton
+                  title={`Πληρωμή με κάρτα · ${formatPrice(cart.totalCents)}`}
+                  onPress={placeOrderAndPay}
+                  loading={placing === "card"}
+                  disabled={placing !== null}
+                />
+                <View style={styles.secondaryAction}>
+                  <PrimaryButton
+                    title="Πληρωμή στο κατάστημα"
+                    onPress={placeOrderPayAtStore}
+                    loading={placing === "store"}
+                    disabled={placing !== null}
+                    variant="secondary"
+                  />
+                </View>
+              </>
+            ) : (
+              <PrimaryButton
+                title="Ολοκλήρωση παραγγελίας"
+                onPress={placeOrderPayAtStore}
+                loading={placing === "store"}
+                disabled={placing !== null}
+              />
+            )}
           </View>
         ) : null}
 
@@ -239,6 +286,7 @@ export function OrdersScreen() {
 }
 
 const styles = StyleSheet.create({
+  secondaryAction: { marginTop: theme.space.sm },
   container: {
     paddingHorizontal: theme.space.lg,
     paddingTop: theme.space.xl,
