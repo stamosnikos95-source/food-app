@@ -26,8 +26,9 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  profile CustomerProfile?
-  orders  Order[]
+  profile       CustomerProfile?
+  orders        Order[]
+  refreshTokens RefreshToken[]
 
   @@map("users")
 }
@@ -101,4 +102,21 @@ model OrderItem {
   unitPriceCents Int
 
   @@map("order_items")
+}
+
+// Opaque, single-use refresh tokens. Only a SHA-256 hash is stored, so a
+// database leak doesn't hand out usable sessions. Each refresh revokes the
+// presented token and issues a new one (rotation); presenting an already
+// revoked token is treated as theft and revokes every session of that user.
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }

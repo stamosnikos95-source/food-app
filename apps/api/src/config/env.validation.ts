@@ -15,6 +15,8 @@ export const envValidationSchema = Joi.object({
 
   JWT_ACCESS_SECRET: Joi.string().min(16).required(),
   JWT_ACCESS_EXPIRES_IN: Joi.string().default("15m"),
-  JWT_REFRESH_SECRET: Joi.string().min(16).required(),
-  JWT_REFRESH_EXPIRES_IN: Joi.string().default("7d"),
+
+  // Refresh tokens are opaque random values stored hashed in the database
+  // (not JWTs), so they need a lifetime but no signing secret.
+  REFRESH_TOKEN_TTL_DAYS: Joi.number().integer().min(1).max(90).default(30),
 });
