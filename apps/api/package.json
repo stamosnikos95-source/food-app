@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "nest build",
+    "build": "tsc -p ../../packages/shared-types/tsconfig.build.json && nest build",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "lint": "eslint \"src/**/*.ts\"",
@@ -11,7 +11,8 @@
     "test:watch": "jest --watch",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:generate": "prisma generate",
-    "prisma:seed": "ts-node --transpile-only prisma/seed.ts"
+    "prisma:seed": "ts-node --transpile-only prisma/seed.ts",
+    "smoke": "DATABASE_URL=postgresql://smoke@localhost/smoke JWT_ACCESS_SECRET=smoke-test-secret-0000 node -e \"require('./dist/app.module'); console.log('compiled app loads')\""
   },
   "dependencies": {
     "@food-app/shared-types": "workspace:*",
@@ -58,7 +59,10 @@
       "js",
       "json",
       "ts"
-    ]
+    ],
+    "moduleNameMapper": {
+      "^@food-app/shared-types$": "<rootDir>/../../../packages/shared-types/src"
+    }
   },
   "prisma": {
     "seed": "ts-node --transpile-only prisma/seed.ts"
