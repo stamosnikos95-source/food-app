@@ -34,8 +34,8 @@ export const color = {
 } as const;
 
 export const typography = {
-  fontDisplay: "'Fraunces', Georgia, serif",
-  fontBody: "'Work Sans', 'Segoe UI', sans-serif",
+  fontDisplay: "Fraunces_600SemiBold",
+  fontBody: "WorkSans_400Regular",
   scale: {
     xs: 12,
     sm: 14,

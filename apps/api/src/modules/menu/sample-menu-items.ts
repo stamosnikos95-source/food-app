@@ -9,6 +9,7 @@ export const SAMPLE_MENU_ITEMS = [
     proteinG: 42,
     carbsG: 48,
     fatG: 18,
+    imageUrl: "🍗",
   },
   {
     id: "seed-solomos-glykopatata",
@@ -20,6 +21,7 @@ export const SAMPLE_MENU_ITEMS = [
     proteinG: 38,
     carbsG: 42,
     fatG: 28,
+    imageUrl: "🐟",
   },
   {
     id: "seed-vegan-fakes",
@@ -31,6 +33,7 @@ export const SAMPLE_MENU_ITEMS = [
     proteinG: 22,
     carbsG: 68,
     fatG: 14,
+    imageUrl: "🌱",
   },
   {
     id: "seed-salad-elliniki-kotopoulo",
@@ -42,6 +45,7 @@ export const SAMPLE_MENU_ITEMS = [
     proteinG: 34,
     carbsG: 18,
     fatG: 28,
+    imageUrl: "🥗",
   },
   {
     id: "seed-wrap-galopoula",
@@ -53,6 +57,7 @@ export const SAMPLE_MENU_ITEMS = [
     proteinG: 30,
     carbsG: 40,
     fatG: 14,
+    imageUrl: "🌯",
   },
   {
     id: "seed-buddha-bowl",
@@ -64,5 +69,6 @@ export const SAMPLE_MENU_ITEMS = [
     proteinG: 18,
     carbsG: 60,
     fatG: 20,
+    imageUrl: "🍲",
   },
 ];

@@ -144,6 +144,11 @@ const styles = StyleSheet.create({
     borderColor: theme.color.border,
     padding: theme.space.md,
     marginBottom: theme.space.md,
+    shadowColor: "#20241E",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 2,
   },
   cartRow: {
     flexDirection: "row",
@@ -185,6 +190,11 @@ const styles = StyleSheet.create({
     borderColor: theme.color.border,
     padding: theme.space.md,
     marginBottom: theme.space.sm,
+    shadowColor: "#20241E",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 1,
   },
   orderHeaderRow: {
     flexDirection: "row",

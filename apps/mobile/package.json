@@ -13,6 +13,9 @@
   "dependencies": {
     "@babel/runtime": "^7.25.0",
     "@expo/metro-runtime": "~3.2.3",
+    "@expo-google-fonts/fraunces": "^0.2.3",
+    "@expo-google-fonts/work-sans": "^0.2.3",
+    "expo-font": "~12.0.10",
     "@food-app/design-tokens": "workspace:*",
     "@food-app/shared-types": "workspace:*",
     "@react-navigation/bottom-tabs": "^6.6.1",
