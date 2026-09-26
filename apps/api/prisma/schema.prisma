@@ -87,7 +87,8 @@ model Order {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  items OrderItem[]
+  items    OrderItem[]
+  payments Payment[]
 
   @@map("orders")
 }
@@ -119,4 +120,32 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+enum PaymentStatus {
+  pending
+  succeeded
+  failed
+  cancelled
+}
+
+// One row per checkout attempt. An order can have several attempts (e.g. the
+// customer abandoned one and retried); at most one can succeed because every
+// new attempt first closes the previous open ones.
+model Payment {
+  id          String        @id @default(uuid())
+  orderId     String
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider    String
+  // Provider-side id (Stripe Checkout Session id). Null only in the short
+  // window between creating this row and the provider call returning.
+  providerRef String?       @unique
+  status      PaymentStatus @default(pending)
+  amountCents Int
+  currency    String        @default("eur")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([orderId])
+  @@map("payments")
 }

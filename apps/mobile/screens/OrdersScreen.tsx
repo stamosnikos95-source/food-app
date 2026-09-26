@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../auth/AuthContext";
 import { useCart } from "../cart/CartContext";
@@ -8,15 +8,19 @@ import { describeError } from "../api/errors";
 import { Screen } from "../components/Screen";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { formatPrice, formatShortDateTime, upperGreek } from "../lib/format";
+import { clearCheckoutReturn, peekCheckoutReturn } from "../checkout/checkoutReturn";
+import { openCheckout } from "../checkout/openCheckout";
 import { theme } from "../theme";
 
 const STATUS: Record<Order["status"], { label: string; tone: "neutral" | "active" | "done" | "muted" }> = {
-  pending: { label: "Σε αναμονή", tone: "neutral" },
+  pending: { label: "Αναμονή πληρωμής", tone: "neutral" },
   confirmed: { label: "Ετοιμάζεται", tone: "active" },
   ready: { label: "Έτοιμη για παραλαβή", tone: "active" },
   completed: { label: "Παραλήφθηκε", tone: "done" },
   cancelled: { label: "Ακυρώθηκε", tone: "muted" },
 };
+
+type Banner = { tone: "success" | "info" | "error"; title: string; message?: string };
 
 type HistoryState =
   | { status: "loading" }
@@ -28,7 +32,10 @@ export function OrdersScreen() {
   const cart = useCart();
   const [history, setHistory] = useState<HistoryState>({ status: "loading" });
   const [placing, setPlacing] = useState(false);
+  const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [paymentsEnabled, setPaymentsEnabled] = useState<boolean | null>(null);
+  const [banner, setBanner] = useState<Banner | null>(null);
 
   const loadOrders = useCallback(() => {
     withAuth((token) => api.getOrders(token))
@@ -40,23 +47,92 @@ export function OrdersScreen() {
   // placed a moment ago is always listed.
   useFocusEffect(loadOrders);
 
-  async function placeOrder() {
+  useEffect(() => {
+    api
+      .getPaymentsConfig()
+      .then((config) => setPaymentsEnabled(config.onlinePaymentsEnabled))
+      .catch(() => setPaymentsEnabled(false));
+  }, []);
+
+  // Back from the hosted payment page: verify with the server, show the outcome.
+  useEffect(() => {
+    const returned = peekCheckoutReturn();
+    if (!returned) return;
+    clearCheckoutReturn();
+
+    if (returned.outcome === "cancelled") {
+      setBanner({
+        tone: "info",
+        title: "Η πληρωμή ακυρώθηκε",
+        message: "Η παραγγελία σου περιμένει στο ιστορικό — μπορείς να την πληρώσεις όποτε θες.",
+      });
+      return;
+    }
+    setBanner({ tone: "info", title: "Επιβεβαιώνουμε την πληρωμή…" });
+    withAuth((token) => api.confirmCheckout(token, returned.sessionId))
+      .then((order) =>
+        setBanner(
+          order.status === "pending"
+            ? {
+                tone: "info",
+                title: "Η πληρωμή επεξεργάζεται",
+                message: "Θα ενημερωθεί εδώ μόλις ολοκληρωθεί.",
+              }
+            : {
+                tone: "success",
+                title: "Η παραγγελία σου επιβεβαιώθηκε",
+                message: "Η πληρωμή ολοκληρώθηκε. Θα σε περιμένει στο κατάστημα.",
+              },
+        ),
+      )
+      .catch((error) =>
+        setBanner({ tone: "error", title: "Δεν επιβεβαιώθηκε ακόμα", message: describeError(error) }),
+      )
+      .finally(loadOrders);
+  }, [withAuth, loadOrders]);
+
+  async function goToPayment(orderId: string) {
+    const { checkoutUrl } = await withAuth((token) => api.startCheckout(token, orderId));
+    await openCheckout(checkoutUrl);
+  }
+
+  const paymentErrors = {
+    503: "Η πληρωμή δεν είναι διαθέσιμη αυτή τη στιγμή. Δοκίμασε ξανά σε λίγο.",
+    409: "Αυτή η παραγγελία έχει ήδη πληρωθεί.",
+  };
+
+  async function placeOrderAndPay() {
     if (cart.lines.length === 0) return;
     setCheckoutError(null);
     setPlacing(true);
+    let orderId: string | null = null;
     try {
       const items = cart.lines.map((l) => ({ menuItemId: l.item.id, quantity: l.quantity }));
-      await withAuth((token) => api.createOrder(token, items));
+      orderId = (await withAuth((token) => api.createOrder(token, items))).id;
+      // The order now exists (awaiting payment), so the cart has done its job;
+      // if payment can't start, it can be retried from the history below.
       cart.clear();
-      loadOrders();
+      await goToPayment(orderId);
     } catch (error) {
       setCheckoutError(
         describeError(error, {
           400: "Κάποιο πιάτο δεν είναι πια διαθέσιμο. Αφαίρεσέ το και δοκίμασε ξανά.",
+          ...paymentErrors,
         }),
       );
-    } finally {
+      if (orderId) loadOrders();
       setPlacing(false);
+    }
+  }
+
+  async function payExistingOrder(orderId: string) {
+    setPayingOrderId(orderId);
+    try {
+      await goToPayment(orderId);
+    } catch (error) {
+      setBanner({ tone: "error", title: "Η πληρωμή δεν ξεκίνησε", message: describeError(error, paymentErrors) });
+      setPayingOrderId(null);
+      loadOrders();
     }
   }
 
@@ -66,6 +142,13 @@ export function OrdersScreen() {
         <Text style={styles.title} accessibilityRole="header">
           Παραγγελίες
         </Text>
+
+        {banner ? (
+          <View style={[styles.banner, bannerTone[banner.tone]]} accessibilityRole="alert">
+            <Text style={styles.bannerTitle}>{banner.title}</Text>
+            {banner.message ? <Text style={styles.bannerMessage}>{banner.message}</Text> : null}
+          </View>
+        ) : null}
 
         {cart.lines.length > 0 ? (
           <View style={styles.cartCard}>
@@ -84,10 +167,20 @@ export function OrdersScreen() {
               <Text style={styles.totalValue}>{formatPrice(cart.totalCents)}</Text>
             </View>
             <Text style={styles.pickupNote}>
-              Παραλαβή από το κατάστημα · πληρωμή κατά την παραλαβή
+              Παραλαβή από το κατάστημα · ασφαλής πληρωμή με κάρτα μέσω Stripe
             </Text>
             {checkoutError ? <Text style={styles.error}>{checkoutError}</Text> : null}
-            <PrimaryButton title="Ολοκλήρωση παραγγελίας" onPress={placeOrder} loading={placing} />
+            {paymentsEnabled === false ? (
+              <Text style={styles.error}>
+                Οι online πληρωμές δεν έχουν ενεργοποιηθεί ακόμα στο κατάστημα.
+              </Text>
+            ) : null}
+            <PrimaryButton
+              title={`Πληρωμή με κάρτα · ${formatPrice(cart.totalCents)}`}
+              onPress={placeOrderAndPay}
+              loading={placing}
+              disabled={paymentsEnabled !== true}
+            />
           </View>
         ) : null}
 
@@ -118,7 +211,24 @@ export function OrdersScreen() {
                 <Text style={styles.orderItems}>
                   {order.items.map((l) => `${l.quantity}× ${l.menuItem.name}`).join(" · ")}
                 </Text>
-                <Text style={styles.orderTotal}>{formatPrice(order.totalPriceCents)}</Text>
+                <View style={styles.orderFooter}>
+                  <Text style={styles.orderTotal}>{formatPrice(order.totalPriceCents)}</Text>
+                  {order.status === "pending" && paymentsEnabled ? (
+                    <Pressable
+                      onPress={() => payExistingOrder(order.id)}
+                      disabled={payingOrderId !== null}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Πληρωμή παραγγελίας ${formatPrice(order.totalPriceCents)}`}
+                      style={({ pressed }) => [styles.payLink, pressed && { opacity: 0.6 }]}
+                    >
+                      {payingOrderId === order.id ? (
+                        <ActivityIndicator color={theme.color.accentStrong} size="small" />
+                      ) : (
+                        <Text style={styles.payLinkText}>Πληρωμή →</Text>
+                      )}
+                    </Pressable>
+                  ) : null}
+                </View>
               </View>
             );
           })
@@ -243,11 +353,46 @@ const styles = StyleSheet.create({
     color: theme.color.textPrimary,
     marginTop: theme.space.xs,
   },
+  orderFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: theme.space.xs,
+  },
   orderTotal: {
     fontFamily: theme.typography.fontBodyMedium,
     fontSize: theme.typography.scale.sm,
     color: theme.color.textSecondary,
-    marginTop: theme.space.xs,
+  },
+  payLink: {
+    minHeight: 36,
+    minWidth: 88,
+    paddingHorizontal: theme.space.sm,
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+  payLinkText: {
+    fontFamily: theme.typography.fontBodySemiBold,
+    fontSize: theme.typography.scale.sm,
+    color: theme.color.accentStrong,
+  },
+  banner: {
+    borderRadius: theme.radius.lg,
+    padding: theme.space.md,
+    marginBottom: theme.space.lg,
+    borderWidth: 1,
+  },
+  bannerTitle: {
+    fontFamily: theme.typography.fontBodySemiBold,
+    fontSize: theme.typography.scale.base,
+    color: theme.color.textPrimary,
+  },
+  bannerMessage: {
+    fontFamily: theme.typography.fontBody,
+    fontSize: theme.typography.scale.sm,
+    lineHeight: 20,
+    color: theme.color.textSecondary,
+    marginTop: 4,
   },
   error: {
     fontFamily: theme.typography.fontBody,
@@ -256,6 +401,12 @@ const styles = StyleSheet.create({
     color: theme.color.danger,
     marginBottom: theme.space.md,
   },
+});
+
+const bannerTone = StyleSheet.create({
+  success: { backgroundColor: theme.color.accentSoft, borderColor: theme.color.accent },
+  info: { backgroundColor: theme.color.surfaceRaised, borderColor: theme.color.border },
+  error: { backgroundColor: theme.color.surfaceRaised, borderColor: theme.color.danger },
 });
 
 const chipTone = StyleSheet.create({

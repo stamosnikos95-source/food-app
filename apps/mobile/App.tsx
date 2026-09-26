@@ -8,6 +8,7 @@ import { theme } from "./theme";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { CartProvider, useCart } from "./cart/CartContext";
 import { Icon, IconName } from "./components/Icon";
+import { peekCheckoutReturn } from "./checkout/checkoutReturn";
 import { AuthGateScreen } from "./screens/AuthGateScreen";
 import { TodayScreen } from "./screens/TodayScreen";
 import { AssistantScreen } from "./screens/AssistantScreen";
@@ -33,6 +34,8 @@ function MainTabs() {
 
   return (
     <Tab.Navigator
+      // Back from the payment page: land on the orders tab to show the outcome.
+      initialRouteName={peekCheckoutReturn() ? "Παραγγελίες" : "Σήμερα"}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: theme.color.accentStrong,

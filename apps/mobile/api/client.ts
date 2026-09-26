@@ -120,4 +120,19 @@ export const api = {
     request<Order>("/orders", { method: "POST", body: { items }, accessToken }),
 
   getOrders: (accessToken: string) => request<Order[]>("/orders", { accessToken }),
+
+  getPaymentsConfig: () =>
+    request<{ onlinePaymentsEnabled: boolean; mode: "test" | "live" | "disabled" }>(
+      "/payments/config",
+    ),
+
+  startCheckout: (accessToken: string, orderId: string) =>
+    request<{ checkoutUrl: string }>("/payments/checkout", {
+      method: "POST",
+      body: { orderId },
+      accessToken,
+    }),
+
+  confirmCheckout: (accessToken: string, sessionId: string) =>
+    request<Order>("/payments/confirm", { method: "POST", body: { sessionId }, accessToken }),
 };

@@ -5,7 +5,8 @@ import { ConfigService } from "@nestjs/config";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: payment webhooks are verified against the exact bytes received.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   app.enableCors({
     // Public API consumed by a browser-hosted preview at a different

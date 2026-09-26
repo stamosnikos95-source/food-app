@@ -7,6 +7,7 @@ import { AuthModule } from "./modules/auth/auth.module";
 import { UsersModule } from "./modules/users/users.module";
 import { MenuModule } from "./modules/menu/menu.module";
 import { OrdersModule } from "./modules/orders/orders.module";
+import { PaymentsModule } from "./modules/payments/payments.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
 
@@ -21,6 +22,7 @@ import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
     UsersModule,
     MenuModule,
     OrdersModule,
+    PaymentsModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
