@@ -3,9 +3,9 @@ import { PlaceholderScreen } from "./PlaceholderScreen";
 export function AssistantScreen() {
   return (
     <PlaceholderScreen
-      milestone="M4"
-      title="AI assistant"
-      subtitle="«Τι να φάω σήμερα;» πάνω στο πραγματικό μενού — ενδεικτικές προτάσεις, όχι διαιτολογική συμβουλή."
+      eyebrow="Έρχεται σύντομα"
+      title="«Τι να φάω σήμερα;»"
+      subtitle="Ο βοηθός θα προτείνει πιάτα από το σημερινό μενού με βάση το προφίλ και το budget σου. Οι προτάσεις θα είναι ενδεικτικές, όχι διαιτολογική συμβουλή."
     />
   );
 }

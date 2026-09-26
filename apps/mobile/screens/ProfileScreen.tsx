@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { Field } from "../components/Field";
 import { PrimaryButton } from "../components/PrimaryButton";
-import { useAuth, ApiError } from "../auth/AuthContext";
+import { Screen } from "../components/Screen";
+import { useAuth } from "../auth/AuthContext";
 import { api, Profile } from "../api/client";
+import { describeError } from "../api/errors";
+import { parseDecimal, upperGreek } from "../lib/format";
 import { theme } from "../theme";
 
 const ACTIVITY_LEVELS: { value: string; label: string }[] = [
@@ -15,7 +18,7 @@ const ACTIVITY_LEVELS: { value: string; label: string }[] = [
 ];
 
 export function ProfileScreen() {
-  const { accessToken, logout } = useAuth();
+  const { withAuth, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,38 +34,42 @@ export function ProfileScreen() {
   const [excludedIngredients, setExcludedIngredients] = useState("");
 
   useEffect(() => {
-    if (!accessToken) return;
-    api
-      .getProfile(accessToken)
+    withAuth((token) => api.getProfile(token))
       .then((profile: Profile) => {
         setAge(profile.age?.toString() ?? "");
         setHeightCm(profile.heightCm?.toString() ?? "");
-        setWeightKg(profile.weightKg?.toString() ?? "");
         setActivityLevel(profile.activityLevel);
         setGoal(profile.goal ?? "");
         setBudgetEuros(
-          profile.budgetPerMealCents != null ? (profile.budgetPerMealCents / 100).toString() : "",
+          profile.budgetPerMealCents != null
+            ? (profile.budgetPerMealCents / 100).toFixed(2).replace(".", ",")
+            : "",
         );
+        setWeightKg(profile.weightKg != null ? String(profile.weightKg).replace(".", ",") : "");
         setDietaryPreferences(profile.dietaryPreferences.join(", "));
         setExcludedIngredients(profile.excludedIngredients.join(", "));
       })
-      .catch((e) => setError(e instanceof ApiError ? e.message : "Κάτι πήγε στραβά"))
+      .catch((e) => setError(describeError(e)))
       .finally(() => setLoading(false));
-  }, [accessToken]);
+  }, [withAuth]);
 
   async function handleSave() {
-    if (!accessToken) return;
     setError(null);
     setSaved(false);
     setSaving(true);
+    // Greek keyboards type decimal commas ("8,50"); parse them explicitly,
+    // otherwise Number("8,50") is NaN and the value is silently dropped.
+    const budget = parseDecimal(budgetEuros);
+    const parsedAge = parseDecimal(age);
+    const parsedHeight = parseDecimal(heightCm);
     try {
-      await api.updateProfile(accessToken, {
-        age: age ? Number(age) : undefined,
-        heightCm: heightCm ? Number(heightCm) : undefined,
-        weightKg: weightKg ? Number(weightKg) : undefined,
+      const patch = {
+        age: parsedAge !== undefined ? Math.round(parsedAge) : undefined,
+        heightCm: parsedHeight !== undefined ? Math.round(parsedHeight) : undefined,
+        weightKg: parseDecimal(weightKg),
         activityLevel: activityLevel ?? undefined,
         goal: goal || undefined,
-        budgetPerMealCents: budgetEuros ? Math.round(Number(budgetEuros) * 100) : undefined,
+        budgetPerMealCents: budget !== undefined ? Math.round(budget * 100) : undefined,
         dietaryPreferences: dietaryPreferences
           .split(",")
           .map((s) => s.trim())
@@ -71,10 +78,15 @@ export function ProfileScreen() {
           .split(",")
           .map((s) => s.trim())
           .filter(Boolean),
-      });
+      };
+      await withAuth((token) => api.updateProfile(token, patch));
       setSaved(true);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Κάτι πήγε στραβά");
+      setError(
+        describeError(e, {
+          400: "Κάποια τιμή δεν είναι έγκυρη — έλεγξε ηλικία (13–120), ύψος (100–250 cm) και βάρος.",
+        }),
+      );
     } finally {
       setSaving(false);
     }
@@ -82,15 +94,25 @@ export function ProfileScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator color={theme.color.accent} />
-      </View>
+      <Screen>
+        <View style={styles.centered}>
+          <ActivityIndicator color={theme.color.accent} />
+        </View>
+      </Screen>
     );
   }
 
   return (
+    <Screen>
     <ScrollView style={styles.flex} contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Το προφίλ μου</Text>
+      <Text style={styles.title} accessibilityRole="header">
+        Το προφίλ μου
+      </Text>
+      <Text style={styles.intro}>
+        Με αυτά τα στοιχεία ο βοηθός θα προτείνει πιάτα από το μενού. Όλα είναι προαιρετικά.
+      </Text>
+
+      <Text style={styles.sectionLabel}>{upperGreek("Σωματικά στοιχεία")}</Text>
 
       <Field label="Ηλικία" value={age} onChangeText={setAge} keyboardType="number-pad" />
       <Field
@@ -124,6 +146,7 @@ export function ProfileScreen() {
         })}
       </View>
 
+      <Text style={styles.sectionLabel}>{upperGreek("Στόχοι & προτιμήσεις")}</Text>
       <Field
         label="Στόχος"
         value={goal}
@@ -158,6 +181,7 @@ export function ProfileScreen() {
         <PrimaryButton title="Αποσύνδεση" onPress={logout} variant="secondary" />
       </View>
     </ScrollView>
+    </Screen>
   );
 }
 
@@ -169,12 +193,32 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: theme.color.background,
   },
-  container: { padding: theme.space.lg, paddingBottom: theme.space["2xl"] },
+  container: {
+    paddingHorizontal: theme.space.lg,
+    paddingTop: theme.space.xl,
+    paddingBottom: theme.space["2xl"],
+  },
+  intro: {
+    fontFamily: theme.typography.fontBody,
+    fontSize: theme.typography.scale.sm,
+    lineHeight: 21,
+    color: theme.color.textSecondary,
+    marginBottom: theme.space.lg,
+  },
+  sectionLabel: {
+    fontFamily: theme.typography.fontBodyMedium,
+    fontSize: theme.typography.scale.xs,
+    letterSpacing: 1.2,
+    color: theme.color.textMuted,
+    marginTop: theme.space.sm,
+    marginBottom: theme.space.md,
+  },
   title: {
     fontFamily: theme.typography.fontDisplay,
     fontSize: theme.typography.scale["2xl"],
+    lineHeight: 38,
     color: theme.color.textPrimary,
-    marginBottom: theme.space.lg,
+    marginBottom: theme.space.xs,
   },
   label: {
     fontFamily: theme.typography.fontBody,
@@ -206,8 +250,8 @@ const styles = StyleSheet.create({
     color: theme.color.textSecondary,
   },
   chipTextSelected: {
+    fontFamily: theme.typography.fontBodyMedium,
     color: theme.color.accentStrong,
-    fontWeight: "600",
   },
   errorBanner: {
     fontFamily: theme.typography.fontBody,

@@ -22,6 +22,8 @@ export function PrimaryButton({
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
       style={({ pressed }) => [
         styles.base,
         isPrimary ? styles.primary : styles.secondary,
@@ -40,8 +42,9 @@ export function PrimaryButton({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.lg,
     paddingVertical: theme.space.sm + 4,
+    paddingHorizontal: theme.space.md,
     alignItems: "center",
     justifyContent: "center",
     minHeight: 48,
@@ -61,15 +64,13 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   primaryText: {
-    fontFamily: theme.typography.fontBody,
+    fontFamily: theme.typography.fontBodySemiBold,
     fontSize: theme.typography.scale.base,
-    fontWeight: "600",
     color: theme.color.surface,
   },
   secondaryText: {
-    fontFamily: theme.typography.fontBody,
+    fontFamily: theme.typography.fontBodyMedium,
     fontSize: theme.typography.scale.base,
-    fontWeight: "600",
     color: theme.color.textPrimary,
   },
 });

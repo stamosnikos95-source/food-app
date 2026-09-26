@@ -11,6 +11,12 @@
     "android": {},
     "extra": {
       "note": "Placeholder config for M0. Icons, splash screen and bundle identifiers are set once brand assets exist."
+    },
+    "web": {
+      "lang": "el",
+      "name": "Food App",
+      "themeColor": "#F2F0E6",
+      "backgroundColor": "#F2F0E6"
     }
   }
 }

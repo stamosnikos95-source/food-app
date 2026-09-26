@@ -2,7 +2,9 @@ import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Field } from "../components/Field";
 import { PrimaryButton } from "../components/PrimaryButton";
-import { useAuth, ApiError } from "../auth/AuthContext";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../auth/AuthContext";
+import { describeError } from "../api/errors";
 import { theme } from "../theme";
 
 interface RegisterScreenProps {
@@ -26,20 +28,27 @@ export function RegisterScreen({ onSwitchToLogin }: RegisterScreenProps) {
     try {
       await register(email.trim(), password);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Κάτι πήγε στραβά");
+      setError(
+        describeError(e, {
+          400: "Έλεγξε το email — ο κωδικός θέλει τουλάχιστον 8 χαρακτήρες.",
+          409: "Υπάρχει ήδη λογαριασμός με αυτό το email. Δοκίμασε να συνδεθείς.",
+        }),
+      );
     } finally {
       setLoading(false);
     }
   }
 
   return (
+    <SafeAreaView style={styles.flex}>
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <Text style={styles.eyebrow}>Food App</Text>
-        <Text style={styles.title}>Δημιούργησε λογαριασμό</Text>
+        <Text style={styles.title} accessibilityRole="header">Δημιούργησε λογαριασμό</Text>
+        <Text style={styles.subtitle}>Το μενού της ημέρας, με θερμίδες και διατροφικά στοιχεία για κάθε πιάτο.</Text>
 
         <View style={styles.form}>
           <Field
@@ -70,6 +79,7 @@ export function RegisterScreen({ onSwitchToLogin }: RegisterScreenProps) {
         />
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -81,7 +91,7 @@ const styles = StyleSheet.create({
     padding: theme.space.lg,
   },
   eyebrow: {
-    fontFamily: theme.typography.fontBody,
+    fontFamily: theme.typography.fontBodyMedium,
     fontSize: theme.typography.scale.sm,
     color: theme.color.textMuted,
     textTransform: "uppercase",
@@ -93,7 +103,16 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.scale["2xl"],
     color: theme.color.textPrimary,
     textAlign: "center",
+    lineHeight: 38,
     marginTop: theme.space.xs,
+  },
+  subtitle: {
+    fontFamily: theme.typography.fontBody,
+    fontSize: theme.typography.scale.base,
+    lineHeight: 23,
+    color: theme.color.textSecondary,
+    textAlign: "center",
+    marginTop: theme.space.sm,
     marginBottom: theme.space.xl,
   },
   form: {
@@ -101,6 +120,8 @@ const styles = StyleSheet.create({
   },
   errorBanner: {
     fontFamily: theme.typography.fontBody,
+    fontSize: theme.typography.scale.sm,
+    lineHeight: 20,
     color: theme.color.danger,
     marginBottom: theme.space.md,
   },

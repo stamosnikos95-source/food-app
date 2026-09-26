@@ -3,8 +3,8 @@
  * Consumed by apps/admin-web (Tailwind theme) and apps/mobile (theme object).
  *
  * Direction: premium, minimal food brand. Warm neutral base, one grounded
- * accent (moss/olive, not the common warm-cream + terracotta combination),
- * confident but quiet typography. No gradients, no "AI dashboard" chrome.
+ * accent (moss/olive), editorial serif for titles and dish names, a warm
+ * Greek-native sans for everything else. No gradients, no "AI" chrome.
  */
 
 export const color = {
@@ -34,8 +34,13 @@ export const color = {
 } as const;
 
 export const typography = {
-  fontDisplay: "Fraunces_600SemiBold",
-  fontBody: "WorkSans_400Regular",
+  // One family name per weight: custom fonts on iOS/Android don't reliably
+  // synthesize weights from `fontWeight`, so never combine these with it.
+  // Both families ship full Greek (see apps/mobile/assets/fonts/README.md).
+  fontDisplay: "Piazzolla_600SemiBold",
+  fontBody: "Commissioner_400Regular",
+  fontBodyMedium: "Commissioner_500Medium",
+  fontBodySemiBold: "Commissioner_600SemiBold",
   scale: {
     xs: 12,
     sm: 14,
@@ -45,10 +50,9 @@ export const typography = {
     "2xl": 32,
     "3xl": 40,
   },
-  weight: {
-    regular: 400,
-    medium: 500,
-    semibold: 600,
+  lineHeight: {
+    tight: 1.2,
+    body: 1.45,
   },
 } as const;
 

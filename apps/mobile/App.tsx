@@ -1,11 +1,13 @@
 import { ActivityIndicator, View } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 import { theme } from "./theme";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
-import { CartProvider } from "./cart/CartContext";
+import { CartProvider, useCart } from "./cart/CartContext";
+import { Icon, IconName } from "./components/Icon";
 import { AuthGateScreen } from "./screens/AuthGateScreen";
 import { TodayScreen } from "./screens/TodayScreen";
 import { AssistantScreen } from "./screens/AssistantScreen";
@@ -14,48 +16,78 @@ import { ProfileScreen } from "./screens/ProfileScreen";
 
 const Tab = createBottomTabNavigator();
 
+const TAB_ICONS: Record<string, IconName> = {
+  Σήμερα: "bowl",
+  Βοηθός: "assistant",
+  Παραγγελίες: "bag",
+  Προφίλ: "user",
+};
+
+const navigationTheme = {
+  ...DefaultTheme,
+  colors: { ...DefaultTheme.colors, background: theme.color.background },
+};
+
 function MainTabs() {
+  const cart = useCart();
+
   return (
     <Tab.Navigator
-      screenOptions={{
+      screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: theme.color.accent,
+        tabBarActiveTintColor: theme.color.accentStrong,
         tabBarInactiveTintColor: theme.color.textMuted,
+        tabBarLabelStyle: { fontFamily: theme.typography.fontBodyMedium, fontSize: 11 },
         tabBarStyle: {
           backgroundColor: theme.color.surface,
           borderTopColor: theme.color.border,
         },
-      }}
+        tabBarIcon: ({ color }) => <Icon name={TAB_ICONS[route.name]} color={color} size={24} />,
+      })}
     >
       <Tab.Screen name="Σήμερα" component={TodayScreen} />
-      <Tab.Screen name="Assistant" component={AssistantScreen} />
-      <Tab.Screen name="Παραγγελίες" component={OrdersScreen} />
+      <Tab.Screen name="Βοηθός" component={AssistantScreen} />
+      <Tab.Screen
+        name="Παραγγελίες"
+        component={OrdersScreen}
+        options={{
+          tabBarBadge: cart.totalCount > 0 ? cart.totalCount : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: theme.color.accent,
+            color: theme.color.surface,
+            fontFamily: theme.typography.fontBodySemiBold,
+            fontSize: 11,
+          },
+        }}
+      />
       <Tab.Screen name="Προφίλ" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }
 
-function RootNavigator() {
-  const { isLoading, accessToken } = useAuth();
+function Splash() {
+  return (
+    <View
+      style={{
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: theme.color.background,
+      }}
+    >
+      <ActivityIndicator color={theme.color.accent} />
+    </View>
+  );
+}
 
-  if (isLoading) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: theme.color.background,
-        }}
-      >
-        <ActivityIndicator color={theme.color.accent} />
-      </View>
-    );
-  }
+function RootNavigator() {
+  const { isLoading, isSignedIn } = useAuth();
+
+  if (isLoading) return <Splash />;
 
   return (
-    <NavigationContainer>
-      {accessToken ? (
+    <NavigationContainer theme={navigationTheme}>
+      {isSignedIn ? (
         <CartProvider>
           <MainTabs />
         </CartProvider>
@@ -67,34 +99,24 @@ function RootNavigator() {
 }
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
-    // Requiring the specific .ttf directly (instead of importing the named
-    // export from the package index) avoids Metro bundling all ~18 weights
-    // the package ships — we only ever use these three.
-    Fraunces_600SemiBold: require("@expo-google-fonts/fraunces/Fraunces_600SemiBold.ttf"),
-    WorkSans_400Regular: require("@expo-google-fonts/work-sans/WorkSans_400Regular.ttf"),
-    WorkSans_500Medium: require("@expo-google-fonts/work-sans/WorkSans_500Medium.ttf"),
+  const [fontsLoaded, fontError] = useFonts({
+    // Vendored + subset to Latin/Greek; see assets/fonts/README.md.
+    Piazzolla_600SemiBold: require("./assets/fonts/Piazzolla-SemiBold.ttf"),
+    Commissioner_400Regular: require("./assets/fonts/Commissioner-Regular.ttf"),
+    Commissioner_500Medium: require("./assets/fonts/Commissioner-Medium.ttf"),
+    Commissioner_600SemiBold: require("./assets/fonts/Commissioner-SemiBold.ttf"),
   });
 
-  if (!fontsLoaded) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: theme.color.background,
-        }}
-      >
-        <ActivityIndicator color={theme.color.accent} />
-      </View>
-    );
-  }
+  // Never block the app on fonts: if they fail (slow network, blocked
+  // request), render with system fonts rather than a spinner forever.
+  if (!fontsLoaded && !fontError) return <Splash />;
 
   return (
-    <AuthProvider>
-      <StatusBar style="dark" />
-      <RootNavigator />
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <StatusBar style="dark" />
+        <RootNavigator />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }

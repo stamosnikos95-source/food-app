@@ -1,48 +1,56 @@
 import { StyleSheet, Text, View } from "react-native";
+import { Screen } from "../components/Screen";
+import { upperGreek } from "../lib/format";
 import { theme } from "../theme";
 
 interface PlaceholderScreenProps {
+  eyebrow: string;
   title: string;
   subtitle: string;
-  milestone: string;
 }
 
-export function PlaceholderScreen({ title, subtitle, milestone }: PlaceholderScreenProps) {
+export function PlaceholderScreen({ eyebrow, title, subtitle }: PlaceholderScreenProps) {
   return (
-    <View style={styles.container}>
-      <Text style={styles.eyebrow}>{milestone}</Text>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.subtitle}>{subtitle}</Text>
-    </View>
+    <Screen>
+      <View style={styles.container}>
+        <Text style={styles.eyebrow}>{upperGreek(eyebrow)}</Text>
+        <Text style={styles.title} accessibilityRole="header">
+          {title}
+        </Text>
+        <Text style={styles.subtitle}>{subtitle}</Text>
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.color.background,
     alignItems: "center",
     justifyContent: "center",
-    padding: theme.space.lg,
+    paddingHorizontal: theme.space.xl,
   },
   eyebrow: {
-    fontFamily: theme.typography.fontBody,
-    fontSize: theme.typography.scale.sm,
+    fontFamily: theme.typography.fontBodyMedium,
+    fontSize: theme.typography.scale.xs,
+    letterSpacing: 1.2,
     color: theme.color.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 1,
   },
   title: {
     fontFamily: theme.typography.fontDisplay,
     fontSize: theme.typography.scale["2xl"],
+    lineHeight: 38,
     color: theme.color.textPrimary,
     marginTop: theme.space.sm,
+    textAlign: "center",
   },
   subtitle: {
     fontFamily: theme.typography.fontBody,
     fontSize: theme.typography.scale.base,
+    lineHeight: 23,
     color: theme.color.textSecondary,
     marginTop: theme.space.sm,
     textAlign: "center",
+    maxWidth: 320,
   },
 });

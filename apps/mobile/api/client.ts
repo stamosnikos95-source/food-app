@@ -32,17 +32,16 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   } catch {
     // The free Render plan spins the service down after 15 minutes idle;
     // the first request after that can take up to ~60s to wake it up.
-    throw new ApiError(
-      "Δεν μπόρεσα να συνδεθώ με τον server. Αν είναι η πρώτη προσπάθεια εδώ και ώρα, δοκίμασε ξανά σε λίγο — ο server μπορεί να χρειάζεται να ξυπνήσει.",
-      0,
-    );
+    throw new ApiError("Network request failed", 0);
   }
 
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
     const message = Array.isArray(data.message) ? data.message.join(", ") : data.message;
-    throw new ApiError(message ?? "Κάτι πήγε στραβά", response.status);
+    // Server messages are developer-facing (English); screens map status
+    // codes to user-facing Greek copy via describeError().
+    throw new ApiError(message ?? response.statusText, response.status);
   }
 
   return data as T;
@@ -99,6 +98,12 @@ export interface Order {
 export const api = {
   register: (email: string, password: string) =>
     request<TokenPair>("/auth/register", { method: "POST", body: { email, password } }),
+
+  refresh: (refreshToken: string) =>
+    request<TokenPair>("/auth/refresh", { method: "POST", body: { refreshToken } }),
+
+  logout: (refreshToken: string) =>
+    request<void>("/auth/logout", { method: "POST", body: { refreshToken } }),
 
   login: (email: string, password: string) =>
     request<TokenPair>("/auth/login", { method: "POST", body: { email, password } }),
