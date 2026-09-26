@@ -1,14 +1,23 @@
 # @food-app/admin-web
 
-Next.js (App Router) admin dashboard. M0 scope: app shell, global styles wired to
-`@food-app/design-tokens`, a placeholder home page listing upcoming modules.
+Back office for the shop, as a static Next.js export (no Node server): all
+data comes from the API at runtime with the staff member's JWT.
 
-## Run
+- **Παραγγελίες** — kitchen board (new → preparing → ready → picked up),
+  refreshes every 15 s, flags late tickets, shows allergens per line.
+  Orders paid online can't be cancelled until refunds exist.
+- **Μενού** — dishes, prices, nutrition and the 14 EU allergens
+  (admins only; staff see it read-only). Dishes are retired, never deleted.
+- **Αναφορές** — daily sales summary.
+
+Access: `admin` and `staff` roles only. The first admin is granted by setting
+`ADMIN_EMAILS` on the API to the email of an **already registered** account
+(see `AdminBootstrapService`). Every status change and menu edit is written
+to `audit_logs`.
 
 ```bash
-pnpm install
-pnpm --filter @food-app/admin-web dev
+pnpm --filter @food-app/admin-web dev     # local
+pnpm --filter @food-app/admin-web build   # static site in ./out
 ```
 
-Real modules (menu, orders, customers, inventory...) land in M5–M8, not before —
-see /docs/architecture.md.
+`NEXT_PUBLIC_API_URL` overrides the API base URL at build time.

@@ -144,6 +144,30 @@ export class PaymentsService {
     }
   }
 
+  /**
+   * Before an order is cancelled: close every checkout still open for it, so
+   * it can't be paid afterwards, and report whether it is (by now) paid.
+   * If a session can't be closed it may have just been paid; re-check it.
+   */
+  async settleBeforeCancel(orderId: string): Promise<{ paid: boolean }> {
+    const open = await this.prisma.payment.findMany({
+      where: { orderId, status: "pending", providerRef: { not: null } },
+    });
+    for (const attempt of open) {
+      try {
+        await this.provider.expireCheckout(attempt.providerRef!);
+        await this.prisma.payment.updateMany({
+          where: { id: attempt.id, status: "pending" },
+          data: { status: "cancelled" },
+        });
+      } catch {
+        await this.reconcile(attempt);
+      }
+    }
+    const paid = await this.prisma.payment.count({ where: { orderId, status: "succeeded" } });
+    return { paid: paid > 0 };
+  }
+
   async handleWebhook(rawBody: Buffer | undefined, signature: string | undefined): Promise<void> {
     if (!rawBody || !signature) throw new BadRequestException("Missing payload or signature");
 

@@ -41,3 +41,48 @@ export interface MenuItemSummary {
   fatG: number;
   imageUrl?: string;
 }
+
+export type OrderStatus = "pending" | "confirmed" | "ready" | "completed" | "cancelled";
+
+/**
+ * Kitchen workflow. The API enforces it; the admin UI uses it to decide
+ * which buttons to show. Paid-online orders additionally can't be
+ * cancelled until refunds exist (enforced server-side).
+ */
+export const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
+  pending: ["confirmed", "cancelled"],
+  confirmed: ["ready", "cancelled"],
+  ready: ["completed", "cancelled"],
+  completed: [],
+  cancelled: [],
+};
+
+/** The 14 allergens that EU Regulation 1169/2011 requires food sellers to declare. */
+export const ALLERGENS = [
+  { code: "gluten", label: "Γλουτένη" },
+  { code: "crustaceans", label: "Καρκινοειδή" },
+  { code: "eggs", label: "Αυγά" },
+  { code: "fish", label: "Ψάρια" },
+  { code: "peanuts", label: "Αράπικα φιστίκια" },
+  { code: "soy", label: "Σόγια" },
+  { code: "milk", label: "Γάλα" },
+  { code: "nuts", label: "Ξηροί καρποί" },
+  { code: "celery", label: "Σέλινο" },
+  { code: "mustard", label: "Μουστάρδα" },
+  { code: "sesame", label: "Σουσάμι" },
+  { code: "sulphites", label: "Θειώδη" },
+  { code: "lupin", label: "Λούπινο" },
+  { code: "molluscs", label: "Μαλάκια" },
+] as const;
+
+export type AllergenCode = (typeof ALLERGENS)[number]["code"];
+export const ALLERGEN_CODES: readonly string[] = ALLERGENS.map((a) => a.code);
+
+export function allergenLabel(code: string): string {
+  return ALLERGENS.find((a) => a.code === code)?.label ?? code;
+}
+
+/** Short code the customer shows at pickup and the kitchen sees on the ticket. */
+export function pickupCode(orderId: string): string {
+  return orderId.replace(/-/g, "").slice(0, 6).toUpperCase();
+}

@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
+import { allergenLabel } from "@food-app/shared-types";
 import { MenuItem } from "../api/client";
 import { formatGrams, formatPrice } from "../lib/format";
 import { QuantityControl } from "./QuantityControl";
@@ -30,6 +31,12 @@ export function MenuItemRow({ item, quantity, onAdd, onRemove }: MenuItemRowProp
         <Text style={styles.kcal}>{item.calories} kcal</Text>
         {`   ${formatGrams(item.proteinG)}g πρωτεΐνη · ${formatGrams(item.carbsG)}g υδατάνθρ. · ${formatGrams(item.fatG)}g λιπαρά`}
       </Text>
+
+      {item.allergens.length > 0 ? (
+        <Text style={styles.allergens}>
+          Αλλεργιογόνα: {item.allergens.map(allergenLabel).join(", ")}
+        </Text>
+      ) : null}
 
       <View style={styles.footerLine}>
         <Text style={styles.portion}>Μερίδα {item.portionWeightG}g</Text>
@@ -83,6 +90,13 @@ const styles = StyleSheet.create({
   kcal: {
     fontFamily: theme.typography.fontBodySemiBold,
     color: theme.color.textPrimary,
+  },
+  allergens: {
+    fontFamily: theme.typography.fontBodyMedium,
+    fontSize: 13,
+    lineHeight: 19,
+    color: theme.color.highlight,
+    marginTop: theme.space.xs,
   },
   footerLine: {
     flexDirection: "row",

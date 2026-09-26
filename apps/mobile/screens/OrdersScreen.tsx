@@ -10,6 +10,7 @@ import { PrimaryButton } from "../components/PrimaryButton";
 import { formatPrice, formatShortDateTime, upperGreek } from "../lib/format";
 import { clearCheckoutReturn, peekCheckoutReturn } from "../checkout/checkoutReturn";
 import { openCheckout } from "../checkout/openCheckout";
+import { pickupCode } from "@food-app/shared-types";
 import { theme } from "../theme";
 
 const STATUS: Record<Order["status"], { label: string; tone: "neutral" | "active" | "done" | "muted" }> = {
@@ -250,7 +251,9 @@ export function OrdersScreen() {
             return (
               <View key={order.id} style={styles.orderRow}>
                 <View style={styles.orderHeader}>
-                  <Text style={styles.orderDate}>{formatShortDateTime(order.createdAt)}</Text>
+                  <Text style={styles.orderDate}>
+                    {formatShortDateTime(order.createdAt)} · #{pickupCode(order.id)}
+                  </Text>
                   <View style={[styles.chip, chipTone[status.tone]]}>
                     <Text style={[styles.chipText, chipTextTone[status.tone]]}>{status.label}</Text>
                   </View>

@@ -3,6 +3,7 @@
 export const SAMPLE_MENU_ITEMS = [
   {
     id: "seed-bowl-kotopoulo-kinoa",
+    allergens: ["milk"],
     name: "Bowl κοτόπουλο & κινόα",
     description: "Ψητό κοτόπουλο, κινόα, αβοκάντο, ντοματίνια, σάλτσα γιαουρτιού",
     priceCents: 850,
@@ -14,6 +15,7 @@ export const SAMPLE_MENU_ITEMS = [
   },
   {
     id: "seed-solomos-glykopatata",
+    allergens: ["fish"],
     name: "Σολομός με γλυκοπατάτα",
     description: "Ψητός σολομός, πουρές γλυκοπατάτας, μπρόκολο στον ατμό",
     priceCents: 980,
@@ -25,6 +27,7 @@ export const SAMPLE_MENU_ITEMS = [
   },
   {
     id: "seed-vegan-fakes",
+    allergens: ["sesame"],
     name: "Vegan bowl με φακές",
     description: "Φακές, καστανό ρύζι, λαχανικά εποχής, ταχίνι",
     priceCents: 750,
@@ -36,6 +39,7 @@ export const SAMPLE_MENU_ITEMS = [
   },
   {
     id: "seed-salad-elliniki-kotopoulo",
+    allergens: ["milk"],
     name: "Ελληνική σαλάτα με κοτόπουλο",
     description: "Ντομάτα, αγγούρι, φέτα, ελιές Καλαμών, ψητό κοτόπουλο, παρθένο ελαιόλαδο",
     priceCents: 800,
@@ -47,6 +51,7 @@ export const SAMPLE_MENU_ITEMS = [
   },
   {
     id: "seed-wrap-galopoula",
+    allergens: ["gluten"],
     name: "Wrap γαλοπούλας με λαχανικά",
     description: "Τορτίγια ολικής άλεσης, γαλοπούλα, λαχανικά, αβοκάντο",
     priceCents: 700,
@@ -58,6 +63,7 @@ export const SAMPLE_MENU_ITEMS = [
   },
   {
     id: "seed-buddha-bowl",
+    allergens: ["sesame"],
     name: "Buddha bowl λαχανικών",
     description: "Ψητά λαχανικά εποχής, χούμους, κινόα, σπόροι",
     priceCents: 780,

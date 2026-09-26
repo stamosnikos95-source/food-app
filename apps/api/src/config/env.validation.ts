@@ -31,4 +31,7 @@ export const envValidationSchema = Joi.object({
   // provider's environment settings; never commit it.
   STRIPE_SECRET_KEY: Joi.string().trim().optional(),
   STRIPE_WEBHOOK_SECRET: Joi.string().trim().optional(),
+
+  // Comma-separated emails of EXISTING accounts to grant admin at startup.
+  ADMIN_EMAILS: Joi.string().allow("").optional(),
 });

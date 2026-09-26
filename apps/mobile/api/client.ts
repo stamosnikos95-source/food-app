@@ -77,6 +77,8 @@ export interface MenuItem {
   fatG: number;
   imageUrl: string | null;
   isActive: boolean;
+  allergens: string[];
+  category: string | null;
 }
 
 export interface OrderItem {
