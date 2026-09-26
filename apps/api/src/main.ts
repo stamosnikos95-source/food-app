@@ -7,6 +7,14 @@ import { AppModule } from "./app.module";
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.enableCors({
+    // Public API consumed by a browser-hosted preview at a different
+    // origin; auth-required routes still need a valid JWT regardless of
+    // origin, so this doesn't weaken access control. Worth narrowing to
+    // known origins once there's a fixed production domain.
+    origin: true,
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
