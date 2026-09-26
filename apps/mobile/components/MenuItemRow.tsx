@@ -32,11 +32,13 @@ export function MenuItemRow({ item, quantity, onAdd, onRemove }: MenuItemRowProp
         {`   ${formatGrams(item.proteinG)}g πρωτεΐνη · ${formatGrams(item.carbsG)}g υδατάνθρ. · ${formatGrams(item.fatG)}g λιπαρά`}
       </Text>
 
-      {item.allergens.length > 0 ? (
-        <Text style={styles.allergens}>
-          Αλλεργιογόνα: {item.allergens.map(allergenLabel).join(", ")}
-        </Text>
-      ) : null}
+      {/* An empty list can mean "none" or "not entered yet". Someone with an
+          allergy must never read silence as "safe", so say where to ask. */}
+      <Text style={styles.allergens}>
+        {item.allergens.length > 0
+          ? `Αλλεργιογόνα: ${item.allergens.map(allergenLabel).join(", ")}`
+          : "Αλλεργιογόνα: ρώτησε στο κατάστημα"}
+      </Text>
 
       <View style={styles.footerLine}>
         <Text style={styles.portion}>Μερίδα {item.portionWeightG}g</Text>
