@@ -29,6 +29,7 @@ model User {
   profile       CustomerProfile?
   orders        Order[]
   refreshTokens RefreshToken[]
+  companyMembership CompanyMember?
 
   @@map("users")
 }
@@ -91,6 +92,11 @@ model Order {
   user            User        @relation(fields: [userId], references: [id])
   status          OrderStatus @default(pending)
   totalPriceCents Int
+  // Employer subsidy (M6): the share of this order paid by the customer's
+  // company, invoiced monthly. The customer pays totalPriceCents - this.
+  companyId        String?
+  company          Company?    @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  companyPaidCents Int         @default(0)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -98,6 +104,7 @@ model Order {
   payments Payment[]
 
   @@index([userId])
+  @@index([companyId, createdAt])
 
   @@map("orders")
 }
@@ -225,4 +232,39 @@ model RecipeIngredient {
   @@unique([recipeId, ingredientId])
   @@index([ingredientId])
   @@map("recipe_ingredients")
+}
+
+// ---- Corporate clients (M6) ----------------------------------------------
+
+model Company {
+  id                  String   @id @default(uuid())
+  name                String
+  vatNumber           String   @unique // Greek ΑΦΜ, 9 digits, checksum-validated
+  billingEmail        String
+  contactName         String?
+  phone               String?
+  address             String?
+  // Paid by the company per employee per calendar day (Europe/Athens).
+  dailyAllowanceCents Int      @default(0)
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  members CompanyMember[]
+  orders  Order[]
+
+  @@map("companies")
+}
+
+// A customer belongs to at most one company (userId is unique).
+model CompanyMember {
+  id        String   @id @default(uuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@map("company_members")
 }

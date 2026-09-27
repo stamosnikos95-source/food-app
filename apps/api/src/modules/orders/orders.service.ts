@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
+import { CompanyAllowanceService } from "../companies/company-allowance.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
 
 interface OrderableMenuItem {
@@ -10,7 +11,10 @@ interface OrderableMenuItem {
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly allowance: CompanyAllowanceService,
+  ) {}
 
   async create(userId: string, dto: CreateOrderDto) {
     const menuItemIds = dto.items.map((i) => i.menuItemId);
@@ -47,13 +51,20 @@ export class OrdersService {
       0,
     );
 
-    return this.prisma.order.create({
-      data: {
-        userId,
-        totalPriceCents,
-        items: { create: orderItemsData },
-      },
-      include: { items: { include: { menuItem: true } } },
+    // One transaction: the employer subsidy is claimed and the order created
+    // atomically, so concurrent orders can't spend the same daily allowance.
+    return this.prisma.$transaction(async (tx) => {
+      const subsidy = await this.allowance.claimForOrder(tx, userId, totalPriceCents);
+      return tx.order.create({
+        data: {
+          userId,
+          totalPriceCents,
+          companyId: subsidy.companyId,
+          companyPaidCents: subsidy.cents,
+          items: { create: orderItemsData },
+        },
+        include: { items: { include: { menuItem: true } } },
+      });
     });
   }
 

@@ -14,6 +14,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { CheckoutSessionInfo, PAYMENT_PROVIDER, PaymentProvider } from "./providers/payment-provider";
 
 const CHECKOUT_TTL_MS = 30 * 60 * 1000; // Stripe's minimum session lifetime.
+const MIN_CARD_CHARGE_CENTS = 50; // Stripe's minimum charge in EUR
 const RECONCILE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
@@ -44,6 +45,13 @@ export class PaymentsService {
     if (order.userId !== userId) throw new ForbiddenException("You don't have access to this order");
     if (order.status !== "pending") throw new ConflictException("Order is not awaiting payment");
 
+    // Company-subsidised orders: only the employee's share goes to checkout.
+    const amountDue = order.totalPriceCents - order.companyPaidCents;
+    if (amountDue <= 0) throw new ConflictException("This order is fully covered by the company");
+    if (amountDue < MIN_CARD_CHARGE_CENTS) {
+      throw new ConflictException("The remaining amount is too small for a card payment; pay at pickup");
+    }
+
     // Close earlier attempts first, so one order can never be charged twice.
     // If closing fails the session may have just been paid: re-check it.
     const earlier = await this.prisma.payment.findMany({
@@ -67,7 +75,7 @@ export class PaymentsService {
       data: {
         orderId,
         provider: this.provider.name,
-        amountCents: order.totalPriceCents,
+        amountCents: amountDue,
         currency: "eur",
       },
     });
@@ -80,11 +88,14 @@ export class PaymentsService {
         customerEmail: order.user.email,
         currency: "eur",
         // Prices come from the stored order (priced server-side), never the client.
-        lines: order.items.map((line) => ({
-          name: line.menuItem.name,
-          unitAmountCents: line.unitPriceCents,
-          quantity: line.quantity,
-        })),
+        lines:
+          order.companyPaidCents > 0
+            ? [{ name: "Παραγγελία (υπόλοιπο μετά την εταιρική επιδότηση)", unitAmountCents: amountDue, quantity: 1 }]
+            : order.items.map((line) => ({
+                name: line.menuItem.name,
+                unitAmountCents: line.unitPriceCents,
+                quantity: line.quantity,
+              })),
         successUrl: `${appUrl}/?checkout=success&order=${orderId}&session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: `${appUrl}/?checkout=cancelled&order=${orderId}`,
         expiresAt: new Date(Date.now() + CHECKOUT_TTL_MS),

@@ -7,17 +7,35 @@ describe("OrdersService", () => {
   let prisma: {
     menuItem: { findMany: jest.Mock };
     order: { create: jest.Mock; findMany: jest.Mock; findUnique: jest.Mock };
+    $transaction: jest.Mock;
   };
+  let allowance: { claimForOrder: jest.Mock };
 
   beforeEach(() => {
     prisma = {
       menuItem: { findMany: jest.fn() },
       order: { create: jest.fn(), findMany: jest.fn(), findUnique: jest.fn() },
+      $transaction: jest.fn(),
     };
-    service = new OrdersService(prisma as unknown as PrismaService);
+    // The transaction callback runs against the same mock client.
+    prisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(prisma));
+    allowance = { claimForOrder: jest.fn().mockResolvedValue({ companyId: null, cents: 0 }) };
+    service = new OrdersService(prisma as unknown as PrismaService, allowance as never);
   });
 
   describe("create", () => {
+    it("records the employer subsidy claimed inside the same transaction", async () => {
+      prisma.menuItem.findMany.mockResolvedValue([{ id: "m1", priceCents: 850, isActive: true }]);
+      prisma.order.create.mockResolvedValue({ id: "o1" });
+      allowance.claimForOrder.mockResolvedValue({ companyId: "c1", cents: 800 });
+
+      await service.create("u1", { items: [{ menuItemId: "m1", quantity: 1 }] });
+
+      expect(allowance.claimForOrder).toHaveBeenCalledWith(prisma, "u1", 850);
+      const data = prisma.order.create.mock.calls[0][0].data;
+      expect(data).toMatchObject({ totalPriceCents: 850, companyId: "c1", companyPaidCents: 800 });
+    });
+
     it("prices the order from the current menu, not the request", async () => {
       prisma.menuItem.findMany.mockResolvedValue([
         { id: "m1", priceCents: 850, isActive: true },
