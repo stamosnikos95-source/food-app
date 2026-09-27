@@ -25,13 +25,13 @@ export class AdminBootstrapService implements OnApplicationBootstrap {
   async onApplicationBootstrap(): Promise<void> {
     const emails = (this.config.get<string>("ADMIN_EMAILS") ?? "")
       .split(",")
-      .map((e) => e.trim())
+      .map((e) => e.trim().toLowerCase())
       .filter(Boolean);
 
     for (const email of emails) {
-      const user = await this.prisma.user.findFirst({
-        where: { email: { equals: email, mode: "insensitive" } },
-      });
+      // Exact match on the normalized address. A case-insensitive search could
+      // pick a look-alike account ("Owner@…") registered by someone else.
+      const user = await this.prisma.user.findUnique({ where: { email } });
       if (!user) {
         this.logger.warn(`ADMIN_EMAILS: no account for ${maskEmail(email)}; skipped`);
         continue;

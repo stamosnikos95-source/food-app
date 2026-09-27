@@ -112,3 +112,17 @@ button, input, textarea, select { font: inherit; color: inherit; }
   .page { padding: 20px 16px 48px; }
   h1 { font-size: 26px; }
 }
+
+/* Menu list: a table on wide screens, one card per dish on phones. */
+.table .cell-price { white-space: nowrap; }
+@media (max-width: 720px) {
+  .menu-table thead { display: none; }
+  .menu-table, .menu-table tbody { display: block; }
+  .menu-table tr { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; padding: 16px; border-bottom: 1px solid var(--border); }
+  .menu-table tr:last-child { border-bottom: 0; }
+  .menu-table td { display: block; padding: 0; border: 0; }
+  .menu-table .cell-price { text-align: right; font-weight: 500; }
+  .menu-table .cell-nutrition, .menu-table .cell-allergens { grid-column: 1 / -1; }
+  .menu-table .cell-status { grid-column: 1; align-self: center; }
+  .menu-table .cell-actions { grid-column: 2; justify-self: end; align-self: center; }
+}

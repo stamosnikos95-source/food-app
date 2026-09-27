@@ -167,19 +167,19 @@ export default function MenuPage() {
       {items === null && !error ? <div className="center">Φόρτωση μενού…</div> : null}
       {items ? (
         <div className="table-wrap">
-          <table className="table">
+          <table className="table menu-table">
             <thead>
               <tr><th>ΠΙΑΤΟ</th><th>ΤΙΜΗ</th><th>ΔΙΑΤΡΟΦΙΚΑ</th><th>ΑΛΛΕΡΓΙΟΓΟΝΑ</th><th>ΚΑΤΑΣΤΑΣΗ</th>{isAdmin ? <th /> : null}</tr>
             </thead>
             <tbody>
               {items.map((item) => (
                 <tr key={item.id} className={item.isActive ? "" : "inactive"}>
-                  <td><div className="dish">{item.name}</div><div className="muted" style={{ fontSize: 13 }}>{item.category ?? ""}</div></td>
-                  <td>{formatPrice(item.priceCents)}</td>
-                  <td style={{ whiteSpace: "nowrap", fontSize: 14 }}>{item.calories} kcal · {item.portionWeightG}g<br />
+                  <td className="cell-dish"><div className="dish">{item.name}</div><div className="muted" style={{ fontSize: 13 }}>{item.category ?? ""}</div></td>
+                  <td className="cell-price">{formatPrice(item.priceCents)}</td>
+                  <td className="cell-nutrition" style={{ whiteSpace: "nowrap", fontSize: 14 }}>{item.calories} kcal · {item.portionWeightG}g<br />
                     <span className="muted">Π {item.proteinG} · Υ {item.carbsG} · Λ {item.fatG}</span></td>
-                  <td><div className="chips">{item.allergens.length ? item.allergens.map((a) => <span key={a} className="chip">{allergenLabel(a)}</span>) : <span className="muted">—</span>}</div></td>
-                  <td>
+                  <td className="cell-allergens"><div className="chips">{item.allergens.length ? item.allergens.map((a) => <span key={a} className="chip">{allergenLabel(a)}</span>) : <span className="muted">—</span>}</div></td>
+                  <td className="cell-status">
                     {isAdmin ? (
                       <button className="btn btn-quiet" onClick={() => toggleActive(item)} aria-label={`${item.isActive ? "Απόσυρση" : "Επαναφορά"}: ${item.name}`}>
                         {item.isActive ? "● Ενεργό" : "○ Ανενεργό"}
@@ -187,7 +187,7 @@ export default function MenuPage() {
                     ) : item.isActive ? "Ενεργό" : "Ανενεργό"}
                   </td>
                   {isAdmin ? (
-                    <td><button className="btn btn-secondary" onClick={() => { setEditing({ id: item.id, draft: toDraft(item) }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Επεξεργασία</button></td>
+                    <td className="cell-actions"><button className="btn btn-secondary" onClick={() => { setEditing({ id: item.id, draft: toDraft(item) }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Επεξεργασία</button></td>
                   ) : null}
                 </tr>
               ))}
