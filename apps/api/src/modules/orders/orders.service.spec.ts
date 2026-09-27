@@ -8,6 +8,7 @@ describe("OrdersService", () => {
     menuItem: { findMany: jest.Mock };
     order: { create: jest.Mock; findMany: jest.Mock; findUnique: jest.Mock };
     $transaction: jest.Mock;
+    recommendationEvent: { updateMany: jest.Mock };
   };
   let allowance: { claimForOrder: jest.Mock };
   let subscriptions: { claimMeals: jest.Mock };
@@ -19,6 +20,7 @@ describe("OrdersService", () => {
       menuItem: { findMany: jest.fn() },
       order: { create: jest.fn(), findMany: jest.fn(), findUnique: jest.fn() },
       $transaction: jest.fn(),
+      recommendationEvent: { updateMany: jest.fn() },
     };
     // The transaction callback runs against the same mock client.
     prisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(prisma));
@@ -30,6 +32,16 @@ describe("OrdersService", () => {
   });
 
   describe("create", () => {
+    it("marks today's recommendations that became this order", async () => {
+      prisma.menuItem.findMany.mockResolvedValue([{ id: "m1", priceCents: 850, isActive: true }]);
+      prisma.order.create.mockResolvedValue({ id: "o5" });
+      await service.create("u1", { items: [{ menuItemId: "m1", quantity: 1 }] });
+      expect(prisma.recommendationEvent.updateMany).toHaveBeenCalledWith({
+        where: expect.objectContaining({ userId: "u1", menuItemId: { in: ["m1"] }, orderId: null }),
+        data: expect.objectContaining({ orderId: "o5" }),
+      });
+    });
+
     it("applies the gym member discount after the employer subsidy and before points", async () => {
       prisma.menuItem.findMany.mockResolvedValue([{ id: "m1", priceCents: 1000, isActive: true }]);
       prisma.order.create.mockResolvedValue({ id: "o7" });

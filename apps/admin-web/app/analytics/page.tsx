@@ -98,6 +98,13 @@ export default function AnalyticsPage() {
             <div className="stat"><b>{data.channels.loyaltyReward}</b><span>με εξαργύρωση πόντων</span></div>
           </div>
 
+          <p className="legend" style={{ marginTop: 20 }}>Προτάσεις «Τι να φάω σήμερα;»</p>
+          {data.recommendations.shown ? (
+            <p className="result">Από {data.recommendations.shown} πιάτα που προτάθηκαν, <strong>{data.recommendations.ordered} έγιναν παραγγελία</strong> την ίδια μέρα ({String(data.recommendations.conversion).replace(".", ",")}%). Αυτά τα δεδομένα θα εκπαιδεύσουν και θα αξιολογήσουν μελλοντικές εκδόσεις των προτάσεων.</p>
+          ) : (
+            <p className="muted">Δεν έχουν εμφανιστεί ακόμα προτάσεις σε αυτό το διάστημα.</p>
+          )}
+
           <p className="legend" style={{ marginTop: 20 }}>Ακρίβεια προβλέψεων παραγωγής (4 εβδομάδες)</p>
           {acc ? (
             <p className="result">

@@ -167,6 +167,10 @@ export interface GymInfo {
 }
 
 export const api = {
+  assistantConfig: (accessToken: string) => request<{ enabled: boolean }>("/assistant/config", { accessToken }),
+  assistantChat: (accessToken: string, messages: { role: "user" | "assistant"; content: string }[]) =>
+    request<{ reply: string; dishes: MenuItem[] }>("/assistant/chat", { method: "POST", body: { messages }, accessToken }),
+
   exportMyData: (accessToken: string) => request<unknown>("/users/me/export", { accessToken }),
   deleteAccount: (accessToken: string, password: string) =>
     request<void>("/users/me", { method: "DELETE", body: { password }, accessToken }),

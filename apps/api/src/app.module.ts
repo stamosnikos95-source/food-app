@@ -3,6 +3,7 @@ import { ConfigModule } from "@nestjs/config";
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { HealthModule } from "./modules/health/health.module";
+import { AssistantModule } from "./modules/assistant/assistant.module";
 import { AnalyticsModule } from "./modules/admin/analytics/analytics.module";
 import { envValidationSchema } from "./config/env.validation";
 import { PrismaModule } from "./prisma/prisma.module";
@@ -26,6 +27,7 @@ import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
     // Per-client rate limit; stricter limits on auth and public endpoints.
     ThrottlerModule.forRoot([{ name: "default", ttl: 60_000, limit: 120 }]),
     HealthModule,
+    AssistantModule,
     AnalyticsModule,
     ConfigModule.forRoot({
       isGlobal: true,

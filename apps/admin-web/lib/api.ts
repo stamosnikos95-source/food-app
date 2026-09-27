@@ -227,6 +227,7 @@ export interface Analytics {
   customers: { active: number; returning: number; new: number };
   channels: { viaGym: number; employerSubsidised: number; mealPlan: number; loyaltyReward: number };
   combos: { aName: string; bName: string; count: number; support: number; confidenceAB: number; lift: number }[];
+  recommendations: { shown: number; ordered: number; conversion: number | null };
   forecastAccuracy: { observations: number; meanAbsoluteError: number; bias: number; meanAbsolutePercentError: number | null } | null;
 }
 export interface SalesSummary {

@@ -83,8 +83,19 @@ export class AnalyticsService {
         loyaltyReward: orders.filter((o) => o.loyaltyDiscountCents > 0).length,
       },
       combos,
+      recommendations: await this.recommendationOutcome(from, to),
       forecastAccuracy: await this.accuracy(addDays(to, -28), to),
     };
+  }
+
+  /** Of the dishes recommended, how many were ordered the same day. */
+  private async recommendationOutcome(from: string, to: string) {
+    const where = { businessDate: { gte: from, lte: to } };
+    const [shown, ordered] = await Promise.all([
+      this.prisma.recommendationEvent.count({ where }),
+      this.prisma.recommendationEvent.count({ where: { ...where, orderId: { not: null } } }),
+    ]);
+    return { shown, ordered, conversion: shown ? Math.round((ordered / shown) * 1000) / 10 : null };
   }
 
   /** Stored forecasts vs what sold, on days the shop was open (last 4 weeks). */

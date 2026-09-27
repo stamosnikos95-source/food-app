@@ -32,6 +32,7 @@ model User {
   companyMembership CompanyMember?
   loyaltyEntries    LoyaltyEntry[]
   subscriptions     Subscription[]
+  recommendationEvents RecommendationEvent[]
 
   @@map("users")
 }
@@ -79,6 +80,7 @@ model MenuItem {
   productionRuns ProductionRun[]
   dishWaste      DishWaste[]
   forecasts      DemandForecast[]
+  recommendationEvents RecommendationEvent[]
 
   @@map("menu_items")
 }
@@ -497,4 +499,26 @@ model GymQrCode {
 
   @@index([gymId])
   @@map("gym_qr_codes")
+}
+
+// ---- Recommendation outcomes (M10) ------------------------------------------
+// What the recommender showed each customer and whether it became an order:
+// the data a learned recommender would be trained and evaluated on. One row
+// per customer, dish and day (first impression kept).
+model RecommendationEvent {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  menuItemId   String
+  menuItem     MenuItem  @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  businessDate String
+  rank         Int // 1 = top pick
+  score        Float
+  shownAt      DateTime  @default(now())
+  orderId      String?
+  orderedAt    DateTime?
+
+  @@unique([userId, menuItemId, businessDate])
+  @@index([businessDate])
+  @@map("recommendation_events")
 }

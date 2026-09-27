@@ -1,76 +1,48 @@
-# Food App — monorepo
+# Food App — healthy-food ordering platform
 
-Healthy-food / meal-prep app for a business in Athens: customer mobile app,
-admin web dashboard, backend API, and an AI service. Full architecture
-proposal: [`docs/architecture.md`](docs/architecture.md). Decision log:
-[`docs/adr/`](docs/adr).
+Customer app, kitchen/back-office web app and API for a healthy-food kitchen in Athens.
+
+| | |
+|---|---|
+| Customer app (web preview) | https://food-app-mobile-web.onrender.com |
+| Admin / kitchen | https://food-app-admin-435q.onrender.com |
+| API | https://food-app-api-6glo.onrender.com/api/v1 (health: `/health`) |
+
+## What's built (M0–M10)
+
+- **Customers**: accounts with rotating sessions; chip-based profile (goal, diet, 14 EU allergens, budget); daily menu with nutrition and allergens; cart and orders (pick-up or delivery to a partner gym); card payments ready (Stripe, off until a key is set); "Τι να φάω σήμερα;" recommendations with reasons; optional AI assistant (off until a key is set); loyalty points; meal plans; GDPR data export and account deletion.
+- **Kitchen & back office**: live order board with what to collect; menu, ingredients and recipes with food cost; inventory ledger, waste and production planning with demand forecasts; customers and roles; corporate clients with daily allowances and monthly statements; meal plans; partner gyms with QR posters and commission reports; sales analytics, combos and forecast accuracy.
+- **Quality**: 167 unit tests; typed builds against the real database schema; boot smoke test; browser checks of every screen at phone size. Details: [`docs/security.md`](docs/security.md), decisions in [`docs/adr/`](docs/adr).
+
+## Turning on the optional features (Render → food-app-api → Environment)
+
+| Feature | Variables |
+|---|---|
+| Card payments | `STRIPE_SECRET_KEY` (and later `STRIPE_WEBHOOK_SECRET`) |
+| AI assistant | `ANTHROPIC_API_KEY` (optional `ANTHROPIC_MODEL`) |
+| First admin | `ADMIN_EMAILS` (existing accounts only) |
+| Loyalty rules | `LOYALTY_POINTS_PER_EURO`, `LOYALTY_REWARD_POINTS`, `LOYALTY_REWARD_VALUE_CENTS` |
 
 ## Layout
 
 ```
-apps/
-  api          NestJS backend (auth, users — M0)
-  admin-web    Next.js admin dashboard shell (M0)
-  mobile       Expo customer app, navigation skeleton (M0)
-packages/
-  design-tokens  Shared colors/typography/spacing
-  shared-types   Shared TypeScript types (Role, AuthUser, ...)
-infra/
-  docker         docker-compose for local Postgres + Redis
-docs/
-  architecture.md, adr/
+apps/api         NestJS API (PostgreSQL via Prisma, migrations in prisma/migrations)
+apps/admin-web   Next.js back office (static export)
+apps/mobile      Expo / React Native customer app (web export deployed)
+packages/        design tokens, shared types
+docs/            architecture, ADRs, security
 ```
 
-## M0 status — what's real right now
-
-- `apps/api`: builds clean, lints clean, 5/5 unit tests pass (AuthService,
-  mocked Prisma — no DB required). Register/login with argon2 + JWT
-  access/refresh, RBAC guard scaffolding, global error format, request
-  logging, env validation.
-- `apps/admin-web`: builds clean (`next build` succeeds), renders a
-  placeholder dashboard shell wired to the shared design tokens.
-- `apps/mobile`: type-checks clean (`tsc --noEmit`). Bottom-tab navigation
-  with 4 placeholder screens. Running it on a simulator/device is the next
-  manual check — this environment can verify types but can't launch Expo.
-- CI (`.github/workflows/ci.yml`): lint + build + unit tests + e2e (against a
-  real Postgres service container) + admin-web build + mobile typecheck.
-
-**One real limitation to know about**: generating the actual Prisma client
-(`prisma generate`) downloads a query-engine binary from Prisma's CDN. That
-download was blocked in the environment this was built in, so the Prisma
-client here has type-checked and built successfully against the *unbuilt*
-package, but hasn't been exercised against a live database yet. On your own
-machine or in CI (both have normal internet access) this is a non-issue —
-just run the setup steps below. Treat "run the e2e suite once, for real"
-as the first thing to do after cloning.
-
-## Setup
+## Development
 
 ```bash
-corepack enable # or: npm install -g pnpm
 pnpm install
-
-cp apps/api/.env.example apps/api/.env
-docker compose -f infra/docker/docker-compose.yml up -d
-
+cp apps/api/.env.example apps/api/.env      # DATABASE_URL, JWT_ACCESS_SECRET, ...
 pnpm --filter @food-app/api prisma:generate
-pnpm exec prisma migrate dev --name init --schema apps/api/prisma/schema.prisma
-
-pnpm --filter @food-app/api start:dev      # http://localhost:3000/api/v1
-pnpm --filter @food-app/admin-web dev      # http://localhost:3000 (admin) -- pick a different port if both run at once
-pnpm --filter @food-app/mobile start       # Expo Go / simulator
-```
-
-## Tests
-
-```bash
-pnpm --filter @food-app/api test       # unit — no DB needed
-pnpm --filter @food-app/api test:e2e   # e2e — needs Postgres running + migrated
+pnpm --filter @food-app/api test            # unit tests (no database needed)
+pnpm --filter @food-app/api build && pnpm --filter @food-app/api run smoke
+pnpm --filter @food-app/admin-web build
 pnpm --filter @food-app/mobile typecheck
 ```
 
-## Next milestone
-
-M1 — customer account & profile (register/login UI in the mobile app wired
-to the `apps/api` auth endpoints, profile/preferences/budget screens and
-API). See `docs/architecture.md` §9 for the full milestone list.
+Before a public launch, work through "Known gaps" in [`docs/security.md`](docs/security.md).

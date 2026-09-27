@@ -42,5 +42,9 @@ export const envValidationSchema = Joi.object({
   LOYALTY_REWARD_POINTS: Joi.number().integer().min(1).max(100000).default(100),
   LOYALTY_REWARD_VALUE_CENTS: Joi.number().integer().min(1).max(100000).default(500),
 
+  // Conversational assistant (M10). Without a key the feature stays off.
+  ANTHROPIC_API_KEY: Joi.string().pattern(/^sk-ant-/).optional(),
+  ANTHROPIC_MODEL: Joi.string().default("claude-haiku-4-5-20251001"),
+
   ADMIN_EMAILS: Joi.string().allow("").optional(),
 });

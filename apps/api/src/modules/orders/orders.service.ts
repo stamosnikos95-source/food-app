@@ -4,6 +4,7 @@ import { CompanyAllowanceService } from "../companies/company-allowance.service"
 import { LoyaltyService } from "../loyalty/loyalty.service";
 import { SubscriptionsService } from "../subscriptions/subscriptions.service";
 import { GymsService } from "../gyms/gyms.service";
+import { businessDateKey } from "../companies/business-time";
 import { CreateOrderDto } from "./dto/create-order.dto";
 
 interface OrderableMenuItem {
@@ -97,6 +98,11 @@ export class OrdersService {
         include: { items: { include: { menuItem: true } } },
       });
       if (reward.points > 0) await this.loyalty.recordRedemption(tx, userId, order.id, reward.points);
+      // Close the loop for the recommender: which of today's picks were ordered.
+      await tx.recommendationEvent.updateMany({
+        where: { userId, businessDate: businessDateKey(), menuItemId: { in: orderItemsData.map((i) => i.menuItemId) }, orderId: null },
+        data: { orderId: order.id, orderedAt: new Date() },
+      });
       return order;
     });
   }

@@ -11,6 +11,7 @@ import { CartBar } from "../components/CartBar";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { AssistantChat } from "../components/AssistantChat";
 import { upperGreek } from "../lib/format";
 import { theme } from "../theme";
 
@@ -71,6 +72,8 @@ export function AssistantScreen() {
             Ενδεικτικός στόχος για ένα κύριο γεύμα: περίπου {data.mealTargetKcal} kcal.
           </Text>
         ) : null}
+
+        <AssistantChat />
 
         {!data.profileComplete ? (
           <View style={styles.promptCard}>
