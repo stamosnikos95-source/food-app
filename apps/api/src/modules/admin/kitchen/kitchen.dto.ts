@@ -56,6 +56,13 @@ export class CreateIngredientDto {
   @IsIn(ALLERGEN_CODES, { each: true })
   allergens?: string[];
 
+  /** Low-stock alert threshold, grams; null clears it. */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(10_000_000)
+  reorderLevelG?: number | null;
+
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;

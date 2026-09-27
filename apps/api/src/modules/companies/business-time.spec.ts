@@ -28,3 +28,14 @@ describe("business time (Europe/Athens)", () => {
     expect(businessMonthKey(new Date("2026-09-30T21:30:00Z"))).toBe("2026-10");
   });
 });
+
+describe("business date keys", () => {
+  it("names the Athens calendar day and does calendar arithmetic", async () => {
+    const { businessDateKey, addDays, weekdayOf, startOfBusinessDate } = await import("./business-time");
+    expect(businessDateKey(new Date("2026-09-26T22:30:00Z"))).toBe("2026-09-27");
+    expect(addDays("2026-09-30", 1)).toBe("2026-10-01");
+    expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
+    expect(weekdayOf("2026-09-27")).toBe(0); // Sunday
+    expect(startOfBusinessDate("2026-09-27").toISOString()).toBe("2026-09-26T21:00:00.000Z");
+  });
+});

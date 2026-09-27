@@ -72,8 +72,11 @@ model MenuItem {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  orderItems OrderItem[]
-  recipe     Recipe?
+  orderItems     OrderItem[]
+  recipe         Recipe?
+  productionRuns ProductionRun[]
+  dishWaste      DishWaste[]
+  forecasts      DemandForecast[]
 
   @@map("menu_items")
 }
@@ -197,10 +200,13 @@ model Ingredient {
   fatPer100g     Float
   allergens      String[] @default([])
   isActive       Boolean  @default(true)
+  // Low-stock alert threshold, grams (M7).
+  reorderLevelG  Float?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   recipeLines RecipeIngredient[]
+  stockMovements StockMovement[]
 
   @@map("ingredients")
 }
@@ -267,4 +273,87 @@ model CompanyMember {
 
   @@index([companyId])
   @@map("company_members")
+}
+
+// ---- Inventory, production and forecasting (M7) --------------------------
+// Stock is a ledger: the current quantity of an ingredient is the sum of its
+// movements, so every change is attributable and nothing is overwritten.
+
+enum StockMovementType {
+  purchase
+  production
+  waste
+  adjustment
+}
+
+model StockMovement {
+  id              String            @id @default(uuid())
+  ingredientId    String
+  ingredient      Ingredient        @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  type            StockMovementType
+  quantityG       Float // signed: + into stock, - out of stock
+  costPerKgCents  Int? // purchases: price paid
+  expiresOn       String? // purchases: best-before, "YYYY-MM-DD"
+  reason          String? // waste: expired | spoiled | overproduction | prep_loss | other
+  note            String?
+  productionRunId String?
+  productionRun   ProductionRun?    @relation(fields: [productionRunId], references: [id], onDelete: Restrict)
+  actorId         String?
+  createdAt       DateTime          @default(now())
+
+  @@index([ingredientId, createdAt])
+  @@index([type, createdAt])
+  @@map("stock_movements")
+}
+
+model ProductionRun {
+  id                  String   @id @default(uuid())
+  menuItemId          String
+  menuItem            MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  businessDate        String // "YYYY-MM-DD", Europe/Athens
+  portions            Int
+  costPerPortionCents Int? // recipe cost at production time
+  actorId             String?
+  createdAt           DateTime @default(now())
+
+  stockMovements StockMovement[]
+
+  @@index([businessDate])
+  @@index([menuItemId, businessDate])
+  @@map("production_runs")
+}
+
+// Prepared portions thrown away (unsold at close, quality issues).
+model DishWaste {
+  id                  String   @id @default(uuid())
+  menuItemId          String
+  menuItem            MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  businessDate        String
+  portions            Int
+  reason              String // unsold | quality | other
+  costPerPortionCents Int?
+  actorId             String?
+  createdAt           DateTime @default(now())
+
+  @@index([businessDate])
+  @@index([menuItemId, businessDate])
+  @@map("dish_waste")
+}
+
+// What we predicted for a day, kept so forecast accuracy can be measured.
+model DemandForecast {
+  id           String   @id @default(uuid())
+  menuItemId   String
+  menuItem     MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  businessDate String
+  predicted    Float?
+  recommended  Int?
+  observations Int
+  confidence   String
+  modelVersion String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([menuItemId, businessDate])
+  @@map("demand_forecasts")
 }

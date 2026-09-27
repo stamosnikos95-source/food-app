@@ -44,3 +44,29 @@ export function businessMonth(key: string, timeZone = BUSINESS_TIME_ZONE) {
   const [year, month] = key.split("-").map(Number);
   return { start: zonedMidnight(year, month, 1, timeZone), end: zonedMidnight(year, month + 1, 1, timeZone) };
 }
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** "2026-09-27" for the local calendar day containing the instant. */
+export function businessDateKey(instant = new Date(), timeZone = BUSINESS_TIME_ZONE): string {
+  const { year, month, day } = wallClock(instant, timeZone);
+  return `${year}-${pad(month)}-${pad(day)}`;
+}
+
+/** Local midnight at the start of a "YYYY-MM-DD" day. */
+export function startOfBusinessDate(key: string, timeZone = BUSINESS_TIME_ZONE): Date {
+  const [year, month, day] = key.split("-").map(Number);
+  return zonedMidnight(year, month, day, timeZone);
+}
+
+/** Calendar arithmetic on "YYYY-MM-DD" keys (no time zone involved). */
+export function addDays(key: string, days: number): string {
+  const [year, month, day] = key.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
+/** 0 = Sunday ... 6 = Saturday. */
+export function weekdayOf(key: string): number {
+  const [year, month, day] = key.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+}
