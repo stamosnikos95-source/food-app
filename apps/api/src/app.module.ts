@@ -9,6 +9,7 @@ import { RecommendationsModule } from "./modules/recommendations/recommendations
 import { CompaniesModule } from "./modules/companies/companies.module";
 import { LoyaltyModule } from "./modules/loyalty/loyalty.module";
 import { SubscriptionsModule } from "./modules/subscriptions/subscriptions.module";
+import { GymsModule } from "./modules/gyms/gyms.module";
 import { MenuModule } from "./modules/menu/menu.module";
 import { OrdersModule } from "./modules/orders/orders.module";
 import { PaymentsModule } from "./modules/payments/payments.module";
@@ -31,6 +32,7 @@ import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
     CompaniesModule,
     LoyaltyModule,
     SubscriptionsModule,
+    GymsModule,
     MenuModule,
     OrdersModule,
     PaymentsModule,

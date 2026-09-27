@@ -11,14 +11,16 @@ import { AdminOperationsController } from "./operations/admin-operations.control
 import { AdminMembershipController } from "./membership/admin-membership.controller";
 import { LoyaltyModule } from "../loyalty/loyalty.module";
 import { SubscriptionsModule } from "../subscriptions/subscriptions.module";
+import { GymsModule } from "../gyms/gyms.module";
+import { AdminGymsController } from "./gyms/admin-gyms.controller";
 import { AdminInventoryService } from "./operations/admin-inventory.service";
 import { AdminPlanningService } from "./operations/admin-planning.service";
 import { AdminCustomersService } from "./people/admin-customers.service";
 import { AdminCompaniesService } from "./people/admin-companies.service";
 
 @Module({
-  imports: [LoyaltyModule, SubscriptionsModule, PaymentsModule],
-  controllers: [AdminController, AdminKitchenController, AdminPeopleController, AdminOperationsController, AdminMembershipController],
+  imports: [LoyaltyModule, SubscriptionsModule, GymsModule, PaymentsModule],
+  controllers: [AdminController, AdminKitchenController, AdminPeopleController, AdminOperationsController, AdminMembershipController, AdminGymsController],
   providers: [AdminOrdersService, AdminMenuService, AdminReportsService, AdminKitchenService, AdminCustomersService, AdminCompaniesService, AdminInventoryService, AdminPlanningService],
 })
 export class AdminModule {}

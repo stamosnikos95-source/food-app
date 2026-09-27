@@ -12,6 +12,7 @@ describe("OrdersService", () => {
   let allowance: { claimForOrder: jest.Mock };
   let subscriptions: { claimMeals: jest.Mock };
   let loyalty: { prepareRedemption: jest.Mock; recordRedemption: jest.Mock };
+  let gyms: { resolveForOrder: jest.Mock };
 
   beforeEach(() => {
     prisma = {
@@ -24,10 +25,34 @@ describe("OrdersService", () => {
     allowance = { claimForOrder: jest.fn().mockResolvedValue({ companyId: null, cents: 0 }) };
     subscriptions = { claimMeals: jest.fn() };
     loyalty = { prepareRedemption: jest.fn(), recordRedemption: jest.fn() };
-    service = new OrdersService(prisma as unknown as PrismaService, allowance as never, subscriptions as never, loyalty as never);
+    gyms = { resolveForOrder: jest.fn() };
+    service = new OrdersService(prisma as unknown as PrismaService, allowance as never, subscriptions as never, loyalty as never, gyms as never);
   });
 
   describe("create", () => {
+    it("applies the gym member discount after the employer subsidy and before points", async () => {
+      prisma.menuItem.findMany.mockResolvedValue([{ id: "m1", priceCents: 1000, isActive: true }]);
+      prisma.order.create.mockResolvedValue({ id: "o7" });
+      gyms.resolveForOrder.mockResolvedValue({ gymId: "g1", qrCodeId: "q1", discountPercent: 10 });
+      allowance.claimForOrder.mockResolvedValue({ companyId: "c1", cents: 200 });
+      loyalty.prepareRedemption.mockResolvedValue({ points: 100, cents: 500 });
+
+      await service.create("u1", { items: [{ menuItemId: "m1", quantity: 1 }], gymCode: "abc234defg", fulfillment: "gym", redeemPoints: true });
+
+      // 10.00 -> employer 2.00 -> member discount 10% of 8.00 = 0.80 -> points see 7.20
+      expect(gyms.resolveForOrder).toHaveBeenCalledWith(prisma, "abc234defg", "gym");
+      expect(loyalty.prepareRedemption).toHaveBeenCalledWith(prisma, "u1", 720);
+      expect(prisma.order.create.mock.calls[0][0].data).toMatchObject({
+        gymId: "g1", gymQrCodeId: "q1", gymDiscountCents: 80, fulfillment: "gym", companyPaidCents: 200,
+      });
+    });
+
+    it("refuses delivery to a gym without a gym code", async () => {
+      prisma.menuItem.findMany.mockResolvedValue([{ id: "m1", priceCents: 1000, isActive: true }]);
+      await expect(service.create("u1", { items: [{ menuItemId: "m1", quantity: 1 }], fulfillment: "gym" })).rejects.toThrow("gym code");
+      expect(prisma.order.create).not.toHaveBeenCalled();
+    });
+
     it("applies discounts in a fixed order: meal plan, then employer, then loyalty", async () => {
       prisma.menuItem.findMany.mockResolvedValue([{ id: "m1", priceCents: 850, isActive: true }]);
       prisma.order.create.mockResolvedValue({ id: "o9" });

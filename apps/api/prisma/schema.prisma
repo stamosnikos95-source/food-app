@@ -111,6 +111,13 @@ model Order {
   loyaltyPointsRedeemed    Int           @default(0)
   loyaltyDiscountCents     Int           @default(0)
   loyaltyEntries           LoyaltyEntry[]
+  // Partner gym attribution (M9): ordered through a gym's QR code.
+  gymId                    String?
+  gym                      Gym?          @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  gymQrCodeId              String?
+  gymQrCode                GymQrCode?    @relation(fields: [gymQrCodeId], references: [id], onDelete: Restrict)
+  gymDiscountCents         Int           @default(0)
+  fulfillment              Fulfillment   @default(store)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -119,6 +126,7 @@ model Order {
 
   @@index([userId])
   @@index([companyId, createdAt])
+  @@index([gymId, createdAt])
 
   @@map("orders")
 }
@@ -441,4 +449,52 @@ model Subscription {
 
   @@index([userId])
   @@map("subscriptions")
+}
+
+// ---- Partner gyms and QR ordering (M9) -----------------------------------
+
+enum Fulfillment {
+  store // picked up at the shop
+  gym // delivered to the partner gym (batch delivery)
+}
+
+model Gym {
+  id                String   @id @default(uuid())
+  name              String
+  address           String?
+  contactName       String?
+  phone             String?
+  email             String?
+  // Member discount on what the customer pays, and the gym's commission on
+  // net sales it brings in; whole percents.
+  discountPercent   Int      @default(0)
+  commissionPercent Int      @default(0)
+  deliveryEnabled   Boolean  @default(false)
+  deliveryNote      String? // e.g. "Στην υποδοχή, 13:00 και 19:00"
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  qrCodes GymQrCode[]
+  orders  Order[]
+
+  @@map("gyms")
+}
+
+// One gym can have several codes (reception, changing rooms...), each
+// revocable on its own. Codes are random and unguessable.
+model GymQrCode {
+  id        String   @id @default(uuid())
+  gymId     String
+  gym       Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  code      String   @unique
+  label     String
+  isActive  Boolean  @default(true)
+  scans     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  orders Order[]
+
+  @@index([gymId])
+  @@map("gym_qr_codes")
 }

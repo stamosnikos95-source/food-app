@@ -47,7 +47,11 @@ export class PaymentsService {
 
     // Discounts (meal plan, employer subsidy, loyalty): only what's left goes to checkout.
     const amountDue =
-      order.totalPriceCents - order.companyPaidCents - order.subscriptionCoveredCents - order.loyaltyDiscountCents;
+      order.totalPriceCents -
+      order.companyPaidCents -
+      order.subscriptionCoveredCents -
+      order.gymDiscountCents -
+      order.loyaltyDiscountCents;
     if (amountDue <= 0) throw new ConflictException("Nothing left to pay on this order");
     if (amountDue < MIN_CARD_CHARGE_CENTS) {
       throw new ConflictException("The remaining amount is too small for a card payment; pay at pickup");

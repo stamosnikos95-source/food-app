@@ -4,7 +4,7 @@ import { customerPaidCents, LoyaltyService } from "./loyalty.service";
 const config = { get: jest.fn((k: string) => ({ LOYALTY_POINTS_PER_EURO: 1, LOYALTY_REWARD_POINTS: 100, LOYALTY_REWARD_VALUE_CENTS: 500 })[k]) };
 const service = new LoyaltyService({} as never, config as never);
 const order = (o: Partial<Parameters<typeof customerPaidCents>[0]> = {}) => ({
-  id: "o1", userId: "u1", totalPriceCents: 1700, companyPaidCents: 0, subscriptionCoveredCents: 0, loyaltyDiscountCents: 0, loyaltyPointsRedeemed: 0, ...o,
+  id: "o1", userId: "u1", totalPriceCents: 1700, companyPaidCents: 0, subscriptionCoveredCents: 0, gymDiscountCents: 0, loyaltyDiscountCents: 0, loyaltyPointsRedeemed: 0, ...o,
 });
 
 describe("LoyaltyService", () => {

@@ -13,6 +13,7 @@ const ACTIVE: OrderStatus[] = ["pending", "confirmed", "ready"];
 const boardInclude = {
   items: { include: { menuItem: { select: { name: true, allergens: true } } } },
   user: { select: { email: true } },
+  gym: { select: { name: true } },
   payments: { where: { status: "succeeded" as const }, select: { id: true } },
 } satisfies Prisma.OrderInclude;
 

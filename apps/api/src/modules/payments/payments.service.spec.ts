@@ -19,6 +19,7 @@ function makeOrder(overrides: Record<string, unknown> = {}) {
     totalPriceCents: 2480,
     companyPaidCents: 0, // discount columns are NOT NULL DEFAULT 0
     subscriptionCoveredCents: 0,
+    gymDiscountCents: 0,
     loyaltyDiscountCents: 0,
     user: { email: "c@example.com" },
     items: [

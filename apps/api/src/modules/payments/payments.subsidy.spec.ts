@@ -3,7 +3,7 @@ import { PaymentsService } from "./payments.service";
 
 function setup(totalPriceCents: number, companyPaidCents: number) {
   const order = {
-    id: "o1", userId: "u1", status: "pending", totalPriceCents, companyPaidCents, subscriptionCoveredCents: 0, loyaltyDiscountCents: 0,
+    id: "o1", userId: "u1", status: "pending", totalPriceCents, companyPaidCents, subscriptionCoveredCents: 0, gymDiscountCents: 0, loyaltyDiscountCents: 0,
     user: { email: "a@acme.gr" },
     items: [{ quantity: 1, unitPriceCents: totalPriceCents, menuItem: { name: "Bowl" } }],
   };

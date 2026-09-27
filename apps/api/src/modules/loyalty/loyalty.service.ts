@@ -4,11 +4,11 @@ import { Order, Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 
 type Db = Prisma.TransactionClient;
-type OrderMoney = Pick<Order, "id" | "userId" | "totalPriceCents" | "companyPaidCents" | "subscriptionCoveredCents" | "loyaltyDiscountCents" | "loyaltyPointsRedeemed">;
+type OrderMoney = Pick<Order, "id" | "userId" | "totalPriceCents" | "companyPaidCents" | "subscriptionCoveredCents" | "gymDiscountCents" | "loyaltyDiscountCents" | "loyaltyPointsRedeemed">;
 
 /** What the customer actually paid, after every discount. */
 export const customerPaidCents = (o: OrderMoney) =>
-  o.totalPriceCents - o.companyPaidCents - o.subscriptionCoveredCents - o.loyaltyDiscountCents;
+  o.totalPriceCents - o.companyPaidCents - o.subscriptionCoveredCents - o.gymDiscountCents - o.loyaltyDiscountCents;
 
 @Injectable()
 export class LoyaltyService {

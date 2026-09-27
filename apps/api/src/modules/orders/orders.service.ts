@@ -3,6 +3,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { CompanyAllowanceService } from "../companies/company-allowance.service";
 import { LoyaltyService } from "../loyalty/loyalty.service";
 import { SubscriptionsService } from "../subscriptions/subscriptions.service";
+import { GymsService } from "../gyms/gyms.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
 
 interface OrderableMenuItem {
@@ -18,6 +19,7 @@ export class OrdersService {
     private readonly allowance: CompanyAllowanceService,
     private readonly subscriptions: SubscriptionsService,
     private readonly loyalty: LoyaltyService,
+    private readonly gyms: GymsService,
   ) {}
 
   async create(userId: string, dto: CreateOrderDto) {
@@ -56,18 +58,23 @@ export class OrdersService {
     );
 
     // One transaction, fixed order of discounts: meal-plan credits, then the
-    // employer subsidy on what's left, then a loyalty reward on what's left
-    // after that. Each claim row-locks what it spends, so concurrent orders
-    // can't double-spend credits, allowance or points.
+    // employer subsidy on what's left, then the partner-gym member discount,
+    // then a loyalty reward. Each claim row-locks what it spends, so
+    // concurrent orders can't double-spend credits, allowance or points.
+    const fulfillment = dto.fulfillment ?? "store";
     return this.prisma.$transaction(async (tx) => {
+      const gym = dto.gymCode ? await this.gyms.resolveForOrder(tx, dto.gymCode, fulfillment) : null;
+      if (!gym && fulfillment === "gym") throw new BadRequestException("Delivery to a gym needs a gym code");
       const plan = dto.subscriptionMeals
         ? await this.subscriptions.claimMeals(tx, userId, dto.subscriptionMeals, orderItemsData)
         : { subscriptionId: null, meals: 0, cents: 0 };
       const afterPlan = totalPriceCents - plan.cents;
       const subsidy = await this.allowance.claimForOrder(tx, userId, afterPlan);
       const afterSubsidy = afterPlan - subsidy.cents;
+      const gymDiscountCents = gym ? Math.floor((afterSubsidy * gym.discountPercent) / 100) : 0;
+      const afterGym = afterSubsidy - gymDiscountCents;
       const reward = dto.redeemPoints
-        ? await this.loyalty.prepareRedemption(tx, userId, afterSubsidy)
+        ? await this.loyalty.prepareRedemption(tx, userId, afterGym)
         : { points: 0, cents: 0 };
 
       const order = await tx.order.create({
@@ -81,6 +88,10 @@ export class OrdersService {
           companyPaidCents: subsidy.cents,
           loyaltyPointsRedeemed: reward.points,
           loyaltyDiscountCents: reward.cents,
+          gymId: gym?.gymId ?? null,
+          gymQrCodeId: gym?.qrCodeId ?? null,
+          gymDiscountCents,
+          fulfillment,
           items: { create: orderItemsData },
         },
         include: { items: { include: { menuItem: true } } },
