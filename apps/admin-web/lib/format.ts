@@ -21,3 +21,7 @@ export function parseDecimal(input: string): number | undefined {
   const value = Number(input.trim().replace(",", "."));
   return input.trim() && Number.isFinite(value) ? value : undefined;
 }
+
+/** 1500 -> "1,5 kg", 850 -> "850 g" */
+export const formatQty = (grams: number) =>
+  Math.abs(grams) >= 1000 ? `${(grams / 1000).toFixed(1).replace(".", ",")} kg` : `${Math.round(grams)} g`;

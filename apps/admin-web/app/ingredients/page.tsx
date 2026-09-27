@@ -8,14 +8,15 @@ import { useSession } from "../../lib/session";
 
 type Draft = {
   name: string; price: string; kcal: string; protein: string; carbs: string; fat: string;
-  allergens: string[]; isActive: boolean;
+  allergens: string[]; isActive: boolean; reorder: string;
 };
-const EMPTY: Draft = { name: "", price: "", kcal: "", protein: "", carbs: "", fat: "", allergens: [], isActive: true };
+const EMPTY: Draft = { name: "", price: "", kcal: "", protein: "", carbs: "", fat: "", allergens: [], isActive: true, reorder: "" };
 const comma = (n: number) => String(n).replace(".", ",");
 const toDraft = (i: Ingredient): Draft => ({
   name: i.name, price: (i.costPerKgCents / 100).toFixed(2).replace(".", ","), kcal: comma(i.kcalPer100g),
   protein: comma(i.proteinPer100g), carbs: comma(i.carbsPer100g), fat: comma(i.fatPer100g),
   allergens: i.allergens, isActive: i.isActive,
+  reorder: i.reorderLevelG != null ? comma(i.reorderLevelG / 1000) : "",
 });
 
 function fromDraft(d: Draft): IngredientInput | string {
@@ -27,7 +28,10 @@ function fromDraft(d: Draft): IngredientInput | string {
     return "Συμπλήρωσε θερμίδες και macros ανά 100 g (γράψε 0 όπου δεν υπάρχει).";
   }
   if (protein + carbs + fat > 100) return "Πρωτεΐνη + υδατάνθρακες + λιπαρά δεν γίνεται να ξεπερνούν τα 100 g ανά 100 g.";
-  return { name: d.name.trim(), costPerKgCents: cost, kcalPer100g: kcal, proteinPer100g: protein, carbsPer100g: carbs, fatPer100g: fat, allergens: d.allergens, isActive: d.isActive };
+  const reorderKg = d.reorder.trim() ? parseDecimal(d.reorder) : null;
+  if (reorderKg === undefined || (reorderKg !== null && reorderKg < 0)) return "Το όριο χαμηλού αποθέματος δεν είναι έγκυρο.";
+  return { name: d.name.trim(), costPerKgCents: cost, kcalPer100g: kcal, proteinPer100g: protein, carbsPer100g: carbs, fatPer100g: fat, allergens: d.allergens, isActive: d.isActive,
+    reorderLevelG: reorderKg === null ? null : Math.round(reorderKg * 1000) };
 }
 
 export default function IngredientsPage() {
@@ -102,6 +106,8 @@ export default function IngredientsPage() {
               <input id="c" inputMode="decimal" value={d.carbs} onChange={(e) => set({ carbs: e.target.value })} /></div>
             <div className="field"><label htmlFor="f">Λιπαρά / 100 g</label>
               <input id="f" inputMode="decimal" value={d.fat} onChange={(e) => set({ fat: e.target.value })} /></div>
+            <div className="field"><label htmlFor="reorder">Ειδοποίηση όταν πέσει κάτω από (kg)</label>
+              <input id="reorder" inputMode="decimal" value={d.reorder} onChange={(e) => set({ reorder: e.target.value })} placeholder="προαιρετικό" /></div>
           </div>
           <fieldset style={{ border: 0, padding: 0, marginTop: 16 }}>
             <legend className="legend">Αλλεργιογόνα</legend>

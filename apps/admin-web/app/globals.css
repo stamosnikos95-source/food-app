@@ -149,3 +149,27 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .statement td, .statement th { font-size: 14px; }
 @media print { .nav, .page-head button, .no-print { display: none !important; } }
 .search-row input { min-width: 0; } /* let the field shrink instead of overflowing its card */
+
+/* Operations (M7) */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.stat { background: #FBFAF6; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+.stat b { display: block; font-family: var(--font-display); font-size: 22px; font-weight: 600; }
+.stat span { font-size: 13px; color: #5B6157; }
+.flag { display: inline-block; margin: 4px 4px 0 0; padding: 1px 8px; border-radius: 999px; font-size: 12px; white-space: nowrap; }
+.flag-low { background: #F6E7C8; color: #7A5A1E; }
+.flag-count, .flag-short { background: #F3D9D4; color: #A23B2E; }
+.flag-exp { background: #F6E7C8; color: #7A5A1E; }
+.conf-high { background: #DDE5D3; color: #2E3E29; }
+.conf-medium { background: #ECEAE0; color: #5B6157; }
+.conf-low, .conf-none { background: #F6E7C8; color: #7A5A1E; }
+.portions { font-family: var(--font-display); font-size: 26px; font-weight: 600; line-height: 1; white-space: nowrap; }
+.basis { font-size: 13px; color: #5B6157; line-height: 1.45; margin-top: 4px; }
+.mini-form { display: flex; gap: 6px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.mini-form input { width: 72px; font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+.segmented { display: inline-flex; gap: 6px; margin-bottom: 16px; }
+.ops-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 720px) {
+  /* Actions get their own row so names and explanations use the full width. */
+  .menu-table.ops-table .cell-actions { grid-column: 1 / -1; justify-self: stretch; justify-content: flex-start; }
+  .menu-table.ops-table .cell-status, .menu-table.ops-table .cell-allergens:empty { display: none; }
+}

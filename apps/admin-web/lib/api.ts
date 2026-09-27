@@ -52,6 +52,7 @@ export interface Ingredient {
   fatPer100g: number;
   allergens: string[];
   isActive: boolean;
+  reorderLevelG?: number | null;
 }
 export type IngredientInput = Omit<Ingredient, "id">;
 export interface RecipeView {
@@ -115,6 +116,46 @@ export interface CompanyStatement {
   month: string;
   orders: { id: string; createdAt: string; employee: string; totalPriceCents: number; companyPaidCents: number }[];
   totals: { orders: number; companyCents: number; employeeCents: number };
+}
+export interface InventoryItem {
+  id: string;
+  name: string;
+  isActive: boolean;
+  stockG: number;
+  reorderLevelG: number | null;
+  costPerKgCents: number;
+  valueCents: number;
+  low: boolean;
+  needsCount: boolean;
+  expiringOn: string | null;
+  lastMovementAt: string | null;
+}
+export interface InventoryOverview { items: InventoryItem[]; totals: { valueCents: number; low: number; expiring: number } }
+export type Confidence = "high" | "medium" | "low" | "none";
+export interface DishPlan {
+  menuItem: { id: string; name: string };
+  hasRecipe: boolean;
+  predicted: number | null;
+  recommended: number | null;
+  observations: number;
+  spread: number | null;
+  confidence: Confidence;
+  basis: string;
+}
+export interface ProductionPlan {
+  date: string;
+  weekday: string;
+  modelVersion: string;
+  openDaysSeen: number;
+  dishes: DishPlan[];
+  ingredients: { ingredientId: string; name: string; requiredG: number; stockG: number; shortfallG: number }[];
+}
+export interface WasteReport {
+  from: string;
+  to: string;
+  dishes: { name: string; portions: number; costCents: number }[];
+  ingredients: { name: string; grams: number; costCents: number }[];
+  totals: { dishCostCents: number; ingredientCostCents: number; wastedPortions: number; producedPortions: number; wastePercent: number | null };
 }
 export interface SalesSummary {
   orders: number;
@@ -197,6 +238,20 @@ export const api = {
     request<CompanyDetail>(`/admin/companies/${id}/members/${userId}`, { method: "DELETE", token }),
   statement: (token: string, id: string, month: string) =>
     request<CompanyStatement>(`/admin/companies/${id}/statement?month=${month}`, { token }),
+
+  inventory: (token: string) => request<InventoryOverview>("/admin/inventory", { token }),
+  purchase: (token: string, body: { ingredientId: string; quantityG: number; costPerKgCents?: number; expiresOn?: string; note?: string }) =>
+    request<unknown>("/admin/inventory/purchases", { method: "POST", body, token }),
+  ingredientWaste: (token: string, body: { ingredientId: string; quantityG: number; reason: string; note?: string }) =>
+    request<unknown>("/admin/inventory/waste", { method: "POST", body, token }),
+  stockCount: (token: string, body: { ingredientId: string; countedG: number; note?: string }) =>
+    request<{ countedG: number; previousG: number; adjustedByG: number }>("/admin/inventory/count", { method: "POST", body, token }),
+  planning: (token: string, date?: string) => request<ProductionPlan>(`/admin/planning${date ? `?date=${date}` : ""}`, { token }),
+  recordProduction: (token: string, body: { menuItemId: string; portions: number; date?: string }) =>
+    request<{ deductedStock: boolean }>("/admin/production", { method: "POST", body, token }),
+  recordLeftover: (token: string, body: { menuItemId: string; portions: number; reason: string; date?: string }) =>
+    request<unknown>("/admin/production/leftovers", { method: "POST", body, token }),
+  wasteReport: (token: string, days = 7) => request<WasteReport>(`/admin/waste?days=${days}`, { token }),
 
   summary: (token: string, from: Date, to: Date) =>
     request<SalesSummary>(

@@ -11,6 +11,8 @@ const NAV = [
   { href: "/menu/", label: "Μενού" },
   { href: "/reports/", label: "Αναφορές" },
   { href: "/ingredients/", label: "Υλικά", adminOnly: true },
+  { href: "/planning/", label: "Παραγωγή", adminOnly: true },
+  { href: "/inventory/", label: "Αποθήκη", adminOnly: true },
   { href: "/recipes/", label: "Συνταγές", adminOnly: true },
   { href: "/customers/", label: "Πελάτες", adminOnly: true },
   { href: "/companies/", label: "Εταιρείες", adminOnly: true },
