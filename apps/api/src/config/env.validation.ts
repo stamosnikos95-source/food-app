@@ -33,5 +33,8 @@ export const envValidationSchema = Joi.object({
   STRIPE_WEBHOOK_SECRET: Joi.string().trim().optional(),
 
   // Comma-separated emails of EXISTING accounts to grant admin at startup.
+  // VAT included in menu prices; food cost % is computed on the net price.
+  MENU_VAT_PERCENT: Joi.number().min(0).max(30).default(13),
+
   ADMIN_EMAILS: Joi.string().allow("").optional(),
 });

@@ -69,6 +69,7 @@ model MenuItem {
   updatedAt      DateTime @updatedAt
 
   orderItems OrderItem[]
+  recipe     Recipe?
 
   @@map("menu_items")
 }
@@ -170,4 +171,55 @@ model AuditLog {
 
   @@index([entityType, entityId])
   @@map("audit_logs")
+}
+
+// ---- Kitchen costing (M5): ingredients -> recipes -> menu items ----------
+
+// Nutrition is per 100 g of the ingredient as weighed in the recipe; cost is
+// the purchase price per kg (per litre is treated as per kg).
+model Ingredient {
+  id             String   @id @default(uuid())
+  name           String   @unique
+  costPerKgCents Int
+  kcalPer100g    Float
+  proteinPer100g Float
+  carbsPer100g   Float
+  fatPer100g     Float
+  allergens      String[] @default([])
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  recipeLines RecipeIngredient[]
+
+  @@map("ingredients")
+}
+
+// A batch recipe producing `yieldPortions` portions of one menu item.
+model Recipe {
+  id            String    @id @default(uuid())
+  menuItemId    String?   @unique
+  menuItem      MenuItem? @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
+  name          String
+  yieldPortions Int       @default(1)
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  lines RecipeIngredient[]
+
+  @@map("recipes")
+}
+
+model RecipeIngredient {
+  id           String     @id @default(uuid())
+  recipeId     String
+  recipe       Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  grams        Float
+
+  @@unique([recipeId, ingredientId])
+  @@index([ingredientId])
+  @@map("recipe_ingredients")
 }
