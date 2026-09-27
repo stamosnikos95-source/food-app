@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../auth/AuthContext";
 import { useCart } from "../cart/CartContext";
-import { api, Order } from "../api/client";
+import { Allowance, api, Order } from "../api/client";
 import { describeError } from "../api/errors";
 import { Screen } from "../components/Screen";
 import { PrimaryButton } from "../components/PrimaryButton";
@@ -33,6 +33,7 @@ export function OrdersScreen() {
   const { withAuth } = useAuth();
   const cart = useCart();
   const [history, setHistory] = useState<HistoryState>({ status: "loading" });
+  const [allowance, setAllowance] = useState<Allowance | null>(null);
   const [placing, setPlacing] = useState<"card" | "store" | null>(null);
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -40,6 +41,9 @@ export function OrdersScreen() {
   const [banner, setBanner] = useState<Banner | null>(null);
 
   const loadOrders = useCallback(() => {
+    withAuth((token) => api.getMyAllowance(token))
+      .then((r) => setAllowance(r.allowance))
+      .catch(() => setAllowance(null));
     withAuth((token) => api.getOrders(token))
       .then((orders) => setHistory({ status: "ready", orders }))
       .catch((error) => setHistory({ status: "error", message: describeError(error) }));
@@ -164,6 +168,10 @@ export function OrdersScreen() {
     }
   }
 
+  // Preview only: the server re-computes the subsidy when the order is placed.
+  const subsidy = allowance ? Math.min(allowance.remainingTodayCents, cart.totalCents) : 0;
+  const amountDue = cart.totalCents - subsidy;
+
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.container}>
@@ -194,6 +202,18 @@ export function OrdersScreen() {
               <Text style={styles.totalLabel}>Σύνολο</Text>
               <Text style={styles.totalValue}>{formatPrice(cart.totalCents)}</Text>
             </View>
+            {subsidy > 0 && allowance ? (
+              <>
+                <View style={styles.subsidyLine}>
+                  <Text style={styles.subsidyLabel}>Επιδότηση {allowance.companyName}</Text>
+                  <Text style={styles.subsidyValue}>−{formatPrice(subsidy)}</Text>
+                </View>
+                <View style={styles.subsidyLine}>
+                  <Text style={styles.totalLabel}>Πληρώνεις</Text>
+                  <Text style={styles.totalLabel}>{formatPrice(amountDue)}</Text>
+                </View>
+              </>
+            ) : null}
             <Text style={styles.pickupNote}>
               {paymentsEnabled
                 ? "Παραλαβή από το κατάστημα · πλήρωσε τώρα με κάρτα ή κατά την παραλαβή"
@@ -203,10 +223,10 @@ export function OrdersScreen() {
             {/* Ordering never depends on online payments being configured:
                 without them (or while their status loads) pay-at-store is the
                 primary action; with them, card is primary and store secondary. */}
-            {paymentsEnabled ? (
+            {paymentsEnabled && amountDue >= MIN_CARD_CHARGE_CENTS ? (
               <>
                 <PrimaryButton
-                  title={`Πληρωμή με κάρτα · ${formatPrice(cart.totalCents)}`}
+                  title={`Πληρωμή με κάρτα · ${formatPrice(amountDue)}`}
                   onPress={placeOrderAndPay}
                   loading={placing === "card"}
                   disabled={placing !== null}
@@ -263,6 +283,9 @@ export function OrdersScreen() {
                 </Text>
                 <View style={styles.orderFooter}>
                   <Text style={styles.orderTotal}>{formatPrice(order.totalPriceCents)}</Text>
+                  {order.companyPaidCents > 0 ? (
+                    <Text style={styles.companyPaid}>Εταιρεία: −{formatPrice(order.companyPaidCents)} · πλήρωσες {formatPrice(order.totalPriceCents - order.companyPaidCents)}</Text>
+                  ) : null}
                   {order.status === "pending" && paymentsEnabled ? (
                     <Pressable
                       onPress={() => payExistingOrder(order.id)}
@@ -288,8 +311,14 @@ export function OrdersScreen() {
   );
 }
 
+const MIN_CARD_CHARGE_CENTS = 50; // the card processor's minimum charge
+
 const styles = StyleSheet.create({
   secondaryAction: { marginTop: theme.space.sm },
+  subsidyLine: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginTop: theme.space.xs },
+  subsidyLabel: { fontFamily: theme.typography.fontBody, fontSize: theme.typography.scale.sm, color: theme.color.accentStrong },
+  subsidyValue: { fontFamily: theme.typography.fontBodyMedium, fontSize: theme.typography.scale.sm, color: theme.color.accentStrong },
+  companyPaid: { fontFamily: theme.typography.fontBody, fontSize: 13, color: theme.color.accentStrong, marginTop: 2 },
   container: {
     paddingHorizontal: theme.space.lg,
     paddingTop: theme.space.xl,

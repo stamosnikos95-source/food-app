@@ -95,6 +95,8 @@ export interface Order {
   id: string;
   status: "pending" | "confirmed" | "ready" | "completed" | "cancelled";
   totalPriceCents: number;
+  /** Share paid by the customer's employer (M6); the customer paid the rest. */
+  companyPaidCents: number;
   createdAt: string;
   items: OrderItem[];
 }
@@ -114,7 +116,17 @@ export interface Recommendation {
   excluded: { item: MenuItem; reasons: string[] }[];
 }
 
+export interface Allowance {
+  companyName: string;
+  dailyAllowanceCents: number;
+  usedTodayCents: number;
+  remainingTodayCents: number;
+}
+
 export const api = {
+  getMyAllowance: (accessToken: string) =>
+    request<{ allowance: Allowance | null }>("/companies/mine", { accessToken }),
+
   getRecommendations: (accessToken: string) =>
     request<Recommendation>("/recommendations/today", { accessToken }),
 

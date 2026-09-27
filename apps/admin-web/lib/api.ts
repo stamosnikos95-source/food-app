@@ -76,6 +76,46 @@ export interface RecipeInput {
   notes?: string;
   lines: { ingredientId: string; grams: number }[];
 }
+export type StaffRole = "customer" | "staff" | "admin";
+export interface AdminCustomer {
+  id: string;
+  email: string;
+  role: string;
+  createdAt: string;
+  company: { id: string; name: string } | null;
+  orders: number;
+  spentCents: number;
+  lastOrderAt: string | null;
+}
+export interface AdminCustomerDetail extends AdminCustomer {
+  recentOrders: {
+    id: string;
+    status: OrderStatus;
+    totalPriceCents: number;
+    companyPaidCents: number;
+    createdAt: string;
+    items: { quantity: number; menuItem: { name: string } }[];
+  }[];
+}
+export interface CustomerPage { total: number; page: number; pageSize: number; customers: AdminCustomer[] }
+export interface CompanyFields {
+  name: string;
+  vatNumber: string;
+  billingEmail: string;
+  contactName: string | null;
+  phone: string | null;
+  address: string | null;
+  dailyAllowanceCents: number;
+  isActive: boolean;
+}
+export interface CompanySummary extends CompanyFields { id: string; members: number; monthToDateCents: number }
+export interface CompanyDetail extends CompanyFields { id: string; members: { userId: string; email: string; since: string }[] }
+export interface CompanyStatement {
+  company: { id: string; name: string; vatNumber: string; billingEmail: string };
+  month: string;
+  orders: { id: string; createdAt: string; employee: string; totalPriceCents: number; companyPaidCents: number }[];
+  totals: { orders: number; companyCents: number; employeeCents: number };
+}
 export interface SalesSummary {
   orders: number;
   revenueCents: number;
@@ -138,6 +178,25 @@ export const api = {
     request<RecipeView>(`/admin/recipes/${id}`, { method: "PATCH", body, token }),
   applyRecipe: (token: string, id: string) =>
     request<AdminMenuItem>(`/admin/recipes/${id}/apply-to-menu`, { method: "POST", token }),
+
+  customers: (token: string, search: string, page: number) =>
+    request<CustomerPage>(`/admin/customers?page=${page}${search ? `&search=${encodeURIComponent(search)}` : ""}`, { token }),
+  customer: (token: string, id: string) => request<AdminCustomerDetail>(`/admin/customers/${id}`, { token }),
+  setRole: (token: string, id: string, role: StaffRole) =>
+    request<AdminCustomerDetail>(`/admin/customers/${id}/role`, { method: "PATCH", body: { role }, token }),
+
+  companies: (token: string) => request<CompanySummary[]>("/admin/companies", { token }),
+  company: (token: string, id: string) => request<CompanyDetail>(`/admin/companies/${id}`, { token }),
+  createCompany: (token: string, body: Partial<CompanyFields>) =>
+    request<CompanyDetail>("/admin/companies", { method: "POST", body, token }),
+  updateCompany: (token: string, id: string, body: Partial<CompanyFields>) =>
+    request<CompanyDetail>(`/admin/companies/${id}`, { method: "PATCH", body, token }),
+  addMember: (token: string, id: string, email: string) =>
+    request<CompanyDetail>(`/admin/companies/${id}/members`, { method: "POST", body: { email }, token }),
+  removeMember: (token: string, id: string, userId: string) =>
+    request<CompanyDetail>(`/admin/companies/${id}/members/${userId}`, { method: "DELETE", token }),
+  statement: (token: string, id: string, month: string) =>
+    request<CompanyStatement>(`/admin/companies/${id}/statement?month=${month}`, { token }),
 
   summary: (token: string, from: Date, to: Date) =>
     request<SalesSummary>(
