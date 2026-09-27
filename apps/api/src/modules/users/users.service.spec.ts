@@ -14,7 +14,7 @@ describe("UsersService", () => {
       user: { findUnique: jest.fn() },
       customerProfile: { findUnique: jest.fn(), upsert: jest.fn() },
     };
-    service = new UsersService(prisma as unknown as PrismaService);
+    service = new UsersService(prisma as unknown as PrismaService, { record: jest.fn() } as never);
   });
 
   describe("findById", () => {

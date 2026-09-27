@@ -10,6 +10,7 @@ import {
   Req,
   UseGuards,
 } from "@nestjs/common";
+import { SkipThrottle } from "@nestjs/throttler";
 import { Request } from "express";
 import { AuthUser } from "@food-app/shared-types";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -41,6 +42,8 @@ export class PaymentsController {
   }
 
   /** Public, but only accepts payloads signed with the webhook secret. */
+  // Stripe retries bursts from shared IPs; signatures, not rate limits, protect it.
+  @SkipThrottle()
   @Post("webhooks/stripe")
   @HttpCode(HttpStatus.OK)
   async stripeWebhook(
