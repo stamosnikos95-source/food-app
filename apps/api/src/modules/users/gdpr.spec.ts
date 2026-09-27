@@ -1,4 +1,4 @@
-import { ConflictException, UnauthorizedException } from "@nestjs/common";
+import { ConflictException, ForbiddenException } from "@nestjs/common";
 import * as argon2 from "argon2";
 import { UsersService } from "./users.service";
 
@@ -20,7 +20,7 @@ async function setup(openOrders = 0) {
 describe("account deletion (GDPR right to erasure)", () => {
   it("requires the password again", async () => {
     const { service, prisma } = await setup();
-    await expect(service.deleteAccount("u1", "wrong")).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(service.deleteAccount("u1", "wrong")).rejects.toBeInstanceOf(ForbiddenException);
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 

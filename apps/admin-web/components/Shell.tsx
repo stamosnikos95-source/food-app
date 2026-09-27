@@ -10,6 +10,7 @@ const NAV = [
   { href: "/", label: "Παραγγελίες" },
   { href: "/menu/", label: "Μενού" },
   { href: "/reports/", label: "Αναφορές" },
+  { href: "/analytics/", label: "Αναλύσεις", adminOnly: true },
   { href: "/ingredients/", label: "Υλικά", adminOnly: true },
   { href: "/planning/", label: "Παραγωγή", adminOnly: true },
   { href: "/inventory/", label: "Αποθήκη", adminOnly: true },

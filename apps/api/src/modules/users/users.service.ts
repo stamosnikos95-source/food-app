@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import * as argon2 from "argon2";
 import { randomBytes } from "crypto";
 import { AuditService } from "../audit/audit.service";
@@ -98,7 +98,9 @@ export class UsersService {
   async deleteAccount(userId: string, password: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException("User not found");
-    if (!(await argon2.verify(user.passwordHash, password))) throw new UnauthorizedException("Wrong password");
+    // 403, not 401: a wrong password here must not look like an expired
+    // session, or clients would refresh tokens and sign the user out.
+    if (!(await argon2.verify(user.passwordHash, password))) throw new ForbiddenException("Wrong password");
     const open = await this.prisma.order.count({ where: { userId, status: { in: ["pending", "confirmed", "ready"] } } });
     if (open > 0) throw new ConflictException("You have an order in progress");
 

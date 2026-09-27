@@ -187,3 +187,13 @@ button, input, textarea, select { font: inherit; color: inherit; }
   .poster h1 { font-size: 40px; margin: 0; }
   .poster p { font-size: 20px; margin: 0; }
 }
+
+/* Analytics (M10) */
+.bars { display: flex; align-items: flex-end; gap: 3px; height: 140px; padding-top: 8px; overflow-x: auto; }
+.bar { flex: 1 0 7px; background: #465C3E; border-radius: 3px 3px 0 0; min-height: 2px; }
+.bar.zero { background: #DEDACB; }
+.axis { display: flex; justify-content: space-between; font-size: 12px; color: #8B8F82; margin-top: 4px; }
+.hbar { display: grid; grid-template-columns: 90px 1fr 44px; gap: 8px; align-items: center; font-size: 14px; margin: 6px 0; }
+.hbar .track { height: 10px; background: #ECEAE0; border-radius: 5px; overflow: hidden; }
+.hbar .fill { height: 10px; background: #465C3E; }
+.rows li .flag { align-self: center; flex-shrink: 0; } /* chips keep their size next to long text */

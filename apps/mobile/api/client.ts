@@ -11,7 +11,7 @@ export class ApiError extends Error {
 }
 
 interface RequestOptions {
-  method?: "GET" | "POST" | "PATCH";
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
   accessToken?: string | null;
 }
@@ -167,6 +167,10 @@ export interface GymInfo {
 }
 
 export const api = {
+  exportMyData: (accessToken: string) => request<unknown>("/users/me/export", { accessToken }),
+  deleteAccount: (accessToken: string, password: string) =>
+    request<void>("/users/me", { method: "DELETE", body: { password }, accessToken }),
+
   /** Public: no account needed to see which gym a QR code belongs to. */
   lookupGym: (code: string) => request<{ code: string; gym: GymInfo }>(`/gyms/by-code/${encodeURIComponent(code)}`),
 

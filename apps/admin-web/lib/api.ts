@@ -216,6 +216,19 @@ export interface GymReport {
   commissionCents: number;
   codes: { id: string; label: string; isActive: boolean; scans: number; orders: number }[];
 }
+export interface Analytics {
+  from: string;
+  to: string;
+  days: number;
+  totals: { orders: number; netSalesCents: number; averageOrderCents: number };
+  series: { date: string; orders: number; netCents: number }[];
+  weekdays: { weekday: string; avgOrders: number }[];
+  topDishes: { name: string; quantity: number; revenueCents: number }[];
+  customers: { active: number; returning: number; new: number };
+  channels: { viaGym: number; employerSubsidised: number; mealPlan: number; loyaltyReward: number };
+  combos: { aName: string; bName: string; count: number; support: number; confidenceAB: number; lift: number }[];
+  forecastAccuracy: { observations: number; meanAbsoluteError: number; bias: number; meanAbsolutePercentError: number | null } | null;
+}
 export interface SalesSummary {
   orders: number;
   revenueCents: number;
@@ -330,6 +343,8 @@ export const api = {
   setGymCode: (token: string, codeId: string, isActive: boolean) =>
     request<GymCode>(`/admin/gym-codes/${codeId}`, { method: "PATCH", body: { isActive }, token }),
   gymReport: (token: string, gymId: string, month: string) => request<GymReport>(`/admin/gyms/${gymId}/report?month=${month}`, { token }),
+
+  analytics: (token: string, days: number) => request<Analytics>(`/admin/analytics?days=${days}`, { token }),
 
   summary: (token: string, from: Date, to: Date) =>
     request<SalesSummary>(

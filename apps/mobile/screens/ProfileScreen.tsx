@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ALLERGENS, MEAL_GOALS } from "@food-app/shared-types";
 import { Field } from "../components/Field";
 import { ChipGroup } from "../components/ChipGroup";
@@ -53,6 +53,11 @@ export function ProfileScreen() {
   const [otherExclusions, setOtherExclusions] = useState("");
   const [otherPreferences, setOtherPreferences] = useState("");
   const [budgetEuros, setBudgetEuros] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const [dataNote, setDataNote] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     withAuth((token) => api.getProfile(token))
@@ -78,6 +83,48 @@ export function ProfileScreen() {
       setSaved(false);
       setter(v);
     };
+  }
+
+  /** GDPR access: a JSON file with everything we hold about the customer. */
+  async function handleExport() {
+    setExporting(true);
+    setDataNote(null);
+    try {
+      const data = await withAuth((token) => api.exportMyData(token));
+      if (Platform.OS === "web") {
+        const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "ta-dedomena-mou.json";
+        link.click();
+        URL.revokeObjectURL(url);
+        setDataNote("Το αρχείο με τα δεδομένα σου κατέβηκε.");
+      } else {
+        setDataNote("Η λήψη αρχείου είναι διαθέσιμη προς το παρόν από την web έκδοση.");
+      }
+    } catch (e) {
+      setDataNote(describeError(e));
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deletePassword) return setDataNote("Γράψε τον κωδικό σου για επιβεβαίωση.");
+    setDeleting(true);
+    setDataNote(null);
+    try {
+      await withAuth((token) => api.deleteAccount(token, deletePassword));
+      await logout();
+    } catch (e) {
+      setDataNote(
+        describeError(e, {
+          403: "Λάθος κωδικός.",
+          409: "Έχεις παραγγελία σε εξέλιξη. Δοκίμασε ξανά όταν ολοκληρωθεί.",
+        }),
+      );
+      setDeleting(false);
+    }
   }
 
   async function handleSave() {
@@ -192,6 +239,30 @@ export function ProfileScreen() {
         <View style={styles.logoutSpacing}>
           <PrimaryButton title="Αποσύνδεση" onPress={logout} variant="secondary" />
         </View>
+
+        <Text style={styles.section}>{upperGreek("Τα δεδομένα μου")}</Text>
+        <Text style={styles.intro}>
+          Μπορείς να κατεβάσεις όσα κρατάμε για σένα ή να διαγράψεις τον λογαριασμό σου. Οι παραγγελίες
+          διατηρούνται χωρίς τα στοιχεία σου, γιατί τις απαιτεί η λογιστική.
+        </Text>
+        <PrimaryButton title="Λήψη των δεδομένων μου" variant="secondary" loading={exporting} onPress={handleExport} />
+        {dataNote ? <Text style={styles.dataNote}>{dataNote}</Text> : null}
+        {!confirmDelete ? (
+          <Pressable onPress={() => setConfirmDelete(true)} accessibilityRole="button" style={styles.deleteLink}>
+            <Text style={styles.deleteText}>Διαγραφή λογαριασμού</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.dangerBox}>
+            <Text style={styles.dangerText}>
+              Η διαγραφή είναι οριστική: χάνονται το προφίλ, οι πόντοι και η συνδρομή σου. Γράψε τον κωδικό σου για επιβεβαίωση.
+            </Text>
+            <Field label="Κωδικός" value={deletePassword} onChangeText={setDeletePassword} secureTextEntry />
+            <PrimaryButton title="Οριστική διαγραφή" loading={deleting} onPress={handleDelete} />
+            <View style={styles.logoutSpacing}>
+              <PrimaryButton title="Άκυρο" variant="secondary" onPress={() => { setConfirmDelete(false); setDeletePassword(""); }} />
+            </View>
+          </View>
+        )}
       </ScrollView>
     </Screen>
   );
@@ -239,4 +310,9 @@ const styles = StyleSheet.create({
     marginBottom: theme.space.md,
   },
   logoutSpacing: { marginTop: theme.space.md },
+  dataNote: { fontFamily: theme.typography.fontBody, fontSize: theme.typography.scale.sm, color: theme.color.textSecondary, marginTop: theme.space.sm },
+  deleteLink: { marginTop: theme.space.lg, paddingVertical: theme.space.sm, alignSelf: "flex-start" },
+  deleteText: { fontFamily: theme.typography.fontBodyMedium, fontSize: theme.typography.scale.sm, color: theme.color.danger },
+  dangerBox: { marginTop: theme.space.lg, padding: theme.space.md, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.color.danger },
+  dangerText: { fontFamily: theme.typography.fontBody, fontSize: theme.typography.scale.sm, lineHeight: 20, color: theme.color.textPrimary, marginBottom: theme.space.md },
 });
