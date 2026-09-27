@@ -13,6 +13,7 @@ describe("AdminCustomersService.setRole", () => {
         update: jest.fn(),
       },
       order: { groupBy: jest.fn().mockResolvedValue([]), findMany: jest.fn().mockResolvedValue([]) },
+      loyaltyEntry: { aggregate: jest.fn().mockResolvedValue({ _sum: { points: 0 } }) },
     };
     const audit = { record: jest.fn() };
     return { prisma, audit, service: new AdminCustomersService(prisma as never, audit as never) };

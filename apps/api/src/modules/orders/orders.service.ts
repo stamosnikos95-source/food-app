@@ -1,6 +1,8 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { CompanyAllowanceService } from "../companies/company-allowance.service";
+import { LoyaltyService } from "../loyalty/loyalty.service";
+import { SubscriptionsService } from "../subscriptions/subscriptions.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
 
 interface OrderableMenuItem {
@@ -14,6 +16,8 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly allowance: CompanyAllowanceService,
+    private readonly subscriptions: SubscriptionsService,
+    private readonly loyalty: LoyaltyService,
   ) {}
 
   async create(userId: string, dto: CreateOrderDto) {
@@ -51,20 +55,38 @@ export class OrdersService {
       0,
     );
 
-    // One transaction: the employer subsidy is claimed and the order created
-    // atomically, so concurrent orders can't spend the same daily allowance.
+    // One transaction, fixed order of discounts: meal-plan credits, then the
+    // employer subsidy on what's left, then a loyalty reward on what's left
+    // after that. Each claim row-locks what it spends, so concurrent orders
+    // can't double-spend credits, allowance or points.
     return this.prisma.$transaction(async (tx) => {
-      const subsidy = await this.allowance.claimForOrder(tx, userId, totalPriceCents);
-      return tx.order.create({
+      const plan = dto.subscriptionMeals
+        ? await this.subscriptions.claimMeals(tx, userId, dto.subscriptionMeals, orderItemsData)
+        : { subscriptionId: null, meals: 0, cents: 0 };
+      const afterPlan = totalPriceCents - plan.cents;
+      const subsidy = await this.allowance.claimForOrder(tx, userId, afterPlan);
+      const afterSubsidy = afterPlan - subsidy.cents;
+      const reward = dto.redeemPoints
+        ? await this.loyalty.prepareRedemption(tx, userId, afterSubsidy)
+        : { points: 0, cents: 0 };
+
+      const order = await tx.order.create({
         data: {
           userId,
           totalPriceCents,
+          subscriptionId: plan.subscriptionId,
+          subscriptionMeals: plan.meals,
+          subscriptionCoveredCents: plan.cents,
           companyId: subsidy.companyId,
           companyPaidCents: subsidy.cents,
+          loyaltyPointsRedeemed: reward.points,
+          loyaltyDiscountCents: reward.cents,
           items: { create: orderItemsData },
         },
         include: { items: { include: { menuItem: true } } },
       });
+      if (reward.points > 0) await this.loyalty.recordRedemption(tx, userId, order.id, reward.points);
+      return order;
     });
   }
 

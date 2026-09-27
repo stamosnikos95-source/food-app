@@ -17,7 +17,9 @@ function makeOrder(overrides: Record<string, unknown> = {}) {
     userId: "u1",
     status: "pending",
     totalPriceCents: 2480,
-    companyPaidCents: 0, // column is NOT NULL DEFAULT 0
+    companyPaidCents: 0, // discount columns are NOT NULL DEFAULT 0
+    subscriptionCoveredCents: 0,
+    loyaltyDiscountCents: 0,
     user: { email: "c@example.com" },
     items: [
       { quantity: 2, unitPriceCents: 850, menuItem: { name: "Bowl κοτόπουλο & κινόα" } },

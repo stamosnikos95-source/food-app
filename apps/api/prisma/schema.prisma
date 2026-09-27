@@ -30,6 +30,8 @@ model User {
   orders        Order[]
   refreshTokens RefreshToken[]
   companyMembership CompanyMember?
+  loyaltyEntries    LoyaltyEntry[]
+  subscriptions     Subscription[]
 
   @@map("users")
 }
@@ -100,6 +102,15 @@ model Order {
   companyId        String?
   company          Company?    @relation(fields: [companyId], references: [id], onDelete: Restrict)
   companyPaidCents Int         @default(0)
+  // Meal plan credits (M8): portions covered by the customer's subscription.
+  subscriptionId           String?
+  subscription             Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+  subscriptionMeals        Int           @default(0)
+  subscriptionCoveredCents Int           @default(0)
+  // Loyalty reward redeemed on this order (M8).
+  loyaltyPointsRedeemed    Int           @default(0)
+  loyaltyDiscountCents     Int           @default(0)
+  loyaltyEntries           LoyaltyEntry[]
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -356,4 +367,78 @@ model DemandForecast {
 
   @@unique([menuItemId, businessDate])
   @@map("demand_forecasts")
+}
+
+// ---- Loyalty and meal plans (M8) ------------------------------------------
+
+enum LoyaltyEntryType {
+  earn
+  redeem
+  reversal
+  adjustment
+}
+
+// Points ledger: a customer's balance is the sum of their entries.
+model LoyaltyEntry {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  type      LoyaltyEntryType
+  points    Int // signed
+  orderId   String?
+  order     Order?           @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  note      String?
+  actorId   String?
+  createdAt DateTime         @default(now())
+
+  // At most one earn / redeem / reversal per order (NULL order ids are distinct).
+  @@unique([orderId, type])
+  @@index([userId, createdAt])
+  @@map("loyalty_entries")
+}
+
+enum SubscriptionStatus {
+  pending // requested, awaiting payment
+  active
+  cancelled
+}
+
+model SubscriptionPlan {
+  id                String   @id @default(uuid())
+  name              String
+  description       String?
+  mealsPerPeriod    Int
+  periodDays        Int
+  priceCents        Int
+  // Each meal credit covers one dish up to this price; the customer pays any difference.
+  maxMealPriceCents Int
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  subscriptions Subscription[]
+
+  @@map("subscription_plans")
+}
+
+// One open (pending or active) subscription per customer: enforced by a
+// partial unique index in the migration (not expressible in Prisma schema).
+model Subscription {
+  id               String             @id @default(uuid())
+  userId           String
+  user             User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  planId           String
+  plan             SubscriptionPlan   @relation(fields: [planId], references: [id], onDelete: Restrict)
+  status           SubscriptionStatus @default(pending)
+  mealsRemaining   Int                @default(0)
+  currentPeriodEnd DateTime?
+  activatedAt      DateTime?
+  lastPaidAt       DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  orders Order[]
+
+  @@index([userId])
+  @@map("subscriptions")
 }

@@ -3,7 +3,7 @@ import { PaymentsService } from "./payments.service";
 
 function setup(totalPriceCents: number, companyPaidCents: number) {
   const order = {
-    id: "o1", userId: "u1", status: "pending", totalPriceCents, companyPaidCents,
+    id: "o1", userId: "u1", status: "pending", totalPriceCents, companyPaidCents, subscriptionCoveredCents: 0, loyaltyDiscountCents: 0,
     user: { email: "a@acme.gr" },
     items: [{ quantity: 1, unitPriceCents: totalPriceCents, menuItem: { name: "Bowl" } }],
   };
@@ -31,7 +31,7 @@ describe("PaymentsService.startCheckout with an employer subsidy", () => {
     expect(prisma.payment.create.mock.calls[0][0].data.amountCents).toBe(350);
     const request = provider.createCheckout.mock.calls[0][0];
     expect(request.lines).toEqual([
-      { name: "Παραγγελία (υπόλοιπο μετά την εταιρική επιδότηση)", unitAmountCents: 350, quantity: 1 },
+      { name: "Παραγγελία (υπόλοιπο μετά από εκπτώσεις)", unitAmountCents: 350, quantity: 1 },
     ]);
   });
 

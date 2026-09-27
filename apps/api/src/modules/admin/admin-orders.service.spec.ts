@@ -12,18 +12,23 @@ const boardRow = (status: string) => ({
 });
 
 describe("AdminOrdersService", () => {
-  let prisma: { order: { findUnique: jest.Mock; updateMany: jest.Mock; findUniqueOrThrow: jest.Mock; findMany: jest.Mock } };
+  let prisma: { order: { findUnique: jest.Mock; updateMany: jest.Mock; findUniqueOrThrow: jest.Mock; findMany: jest.Mock }; $transaction: jest.Mock };
+  let loyalty: { awardForCompletedOrder: jest.Mock; reverseRedemption: jest.Mock };
+  let subscriptions: { releaseMeals: jest.Mock };
   let payments: { settleBeforeCancel: jest.Mock };
   let audit: { record: jest.Mock };
   let service: AdminOrdersService;
 
   beforeEach(() => {
     prisma = { order: { findUnique: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-      findUniqueOrThrow: jest.fn(), findMany: jest.fn().mockResolvedValue([]) } };
+      findUniqueOrThrow: jest.fn(), findMany: jest.fn().mockResolvedValue([]) }, $transaction: jest.fn() };
+    prisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(prisma));
+    loyalty = { awardForCompletedOrder: jest.fn(), reverseRedemption: jest.fn() };
+    subscriptions = { releaseMeals: jest.fn() };
     payments = { settleBeforeCancel: jest.fn().mockResolvedValue({ paid: false }) };
     audit = { record: jest.fn() };
     service = new AdminOrdersService(prisma as unknown as PrismaService,
-      payments as unknown as PaymentsService, audit as unknown as AuditService);
+      payments as unknown as PaymentsService, audit as unknown as AuditService, loyalty as never, subscriptions as never);
   });
 
   it("moves an order along the workflow, guarded against concurrent edits, and audits it", async () => {
@@ -77,5 +82,22 @@ describe("AdminOrdersService", () => {
     await service.list({ status: "active" });
     expect(prisma.order.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: { status: { in: ["pending", "confirmed", "ready"] } }, orderBy: { createdAt: "asc" } }));
+  });
+
+  it("awards loyalty points when an order is picked up, inside the same transaction", async () => {
+    prisma.order.findUnique.mockResolvedValue({ id: "o1", status: "ready" });
+    prisma.order.findUniqueOrThrow.mockResolvedValue(boardRow("completed"));
+    await service.updateStatus("o1", "completed", staff);
+    expect(loyalty.awardForCompletedOrder).toHaveBeenCalledWith(prisma, { id: "o1", status: "ready" });
+    expect(subscriptions.releaseMeals).not.toHaveBeenCalled();
+  });
+
+  it("gives back points and meal credits when an order is cancelled", async () => {
+    prisma.order.findUnique.mockResolvedValue({ id: "o1", status: "pending" });
+    prisma.order.findUniqueOrThrow.mockResolvedValue(boardRow("cancelled"));
+    await service.updateStatus("o1", "cancelled", staff);
+    expect(loyalty.reverseRedemption).toHaveBeenCalled();
+    expect(subscriptions.releaseMeals).toHaveBeenCalled();
+    expect(loyalty.awardForCompletedOrder).not.toHaveBeenCalled();
   });
 });

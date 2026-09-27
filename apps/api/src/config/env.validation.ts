@@ -36,5 +36,11 @@ export const envValidationSchema = Joi.object({
   // VAT included in menu prices; food cost % is computed on the net price.
   MENU_VAT_PERCENT: Joi.number().min(0).max(30).default(13),
 
+  // Loyalty (M8): points per euro the customer pays; a reward costs
+  // LOYALTY_REWARD_POINTS and takes LOYALTY_REWARD_VALUE_CENTS off an order.
+  LOYALTY_POINTS_PER_EURO: Joi.number().integer().min(0).max(100).default(1),
+  LOYALTY_REWARD_POINTS: Joi.number().integer().min(1).max(100000).default(100),
+  LOYALTY_REWARD_VALUE_CENTS: Joi.number().integer().min(1).max(100000).default(500),
+
   ADMIN_EMAILS: Joi.string().allow("").optional(),
 });

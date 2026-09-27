@@ -4,6 +4,8 @@ import { AuthUser, ORDER_STATUS_TRANSITIONS } from "@food-app/shared-types";
 import { PrismaService } from "../../prisma/prisma.service";
 import { PaymentsService } from "../payments/payments.service";
 import { AuditService } from "../audit/audit.service";
+import { LoyaltyService } from "../loyalty/loyalty.service";
+import { SubscriptionsService } from "../subscriptions/subscriptions.service";
 import { ListAdminOrdersQuery } from "./dto/admin-orders.dto";
 
 const ACTIVE: OrderStatus[] = ["pending", "confirmed", "ready"];
@@ -28,6 +30,8 @@ export class AdminOrdersService {
     private readonly prisma: PrismaService,
     private readonly payments: PaymentsService,
     private readonly audit: AuditService,
+    private readonly loyalty: LoyaltyService,
+    private readonly subscriptions: SubscriptionsService,
   ) {}
 
   async list(query: ListAdminOrdersQuery) {
@@ -69,14 +73,22 @@ export class AdminOrdersService {
       }
     }
 
-    // Optimistic concurrency: two staff tapping at once can't both apply a move.
-    const result = await this.prisma.order.updateMany({
-      where: { id: orderId, status: order.status },
-      data: { status: next },
+    // Optimistic concurrency: two staff tapping at once can't both apply a
+    // move. Side effects share the transaction, so they happen exactly once.
+    await this.prisma.$transaction(async (tx) => {
+      const result = await tx.order.updateMany({
+        where: { id: orderId, status: order.status },
+        data: { status: next },
+      });
+      if (result.count !== 1) {
+        throw new ConflictException("The order changed in the meantime; refresh and try again");
+      }
+      if (next === "completed") await this.loyalty.awardForCompletedOrder(tx, order);
+      if (next === "cancelled") {
+        await this.loyalty.reverseRedemption(tx, order);
+        await this.subscriptions.releaseMeals(tx, order);
+      }
     });
-    if (result.count !== 1) {
-      throw new ConflictException("The order changed in the meantime; refresh and try again");
-    }
 
     await this.audit.record(actor.id, "order.status_changed", "order", orderId, {
       from: order.status,

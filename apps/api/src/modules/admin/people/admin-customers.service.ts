@@ -56,8 +56,9 @@ export class AdminCustomersService {
         },
       }),
     ]);
+    const points = await this.prisma.loyaltyEntry.aggregate({ where: { userId: id }, _sum: { points: true } });
     await this.audit.record(actor.id, "customer.viewed", "user", id);
-    return { ...this.toView(user, stats), recentOrders };
+    return { ...this.toView(user, stats), loyaltyPoints: points._sum.points ?? 0, recentOrders };
   }
 
   async setRole(id: string, role: (typeof ASSIGNABLE_ROLES)[number], actor: AuthUser) {

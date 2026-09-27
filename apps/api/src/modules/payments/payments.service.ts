@@ -45,9 +45,10 @@ export class PaymentsService {
     if (order.userId !== userId) throw new ForbiddenException("You don't have access to this order");
     if (order.status !== "pending") throw new ConflictException("Order is not awaiting payment");
 
-    // Company-subsidised orders: only the employee's share goes to checkout.
-    const amountDue = order.totalPriceCents - order.companyPaidCents;
-    if (amountDue <= 0) throw new ConflictException("This order is fully covered by the company");
+    // Discounts (meal plan, employer subsidy, loyalty): only what's left goes to checkout.
+    const amountDue =
+      order.totalPriceCents - order.companyPaidCents - order.subscriptionCoveredCents - order.loyaltyDiscountCents;
+    if (amountDue <= 0) throw new ConflictException("Nothing left to pay on this order");
     if (amountDue < MIN_CARD_CHARGE_CENTS) {
       throw new ConflictException("The remaining amount is too small for a card payment; pay at pickup");
     }
@@ -89,8 +90,8 @@ export class PaymentsService {
         currency: "eur",
         // Prices come from the stored order (priced server-side), never the client.
         lines:
-          order.companyPaidCents > 0
-            ? [{ name: "Παραγγελία (υπόλοιπο μετά την εταιρική επιδότηση)", unitAmountCents: amountDue, quantity: 1 }]
+          amountDue !== order.totalPriceCents
+            ? [{ name: "Παραγγελία (υπόλοιπο μετά από εκπτώσεις)", unitAmountCents: amountDue, quantity: 1 }]
             : order.items.map((line) => ({
                 name: line.menuItem.name,
                 unitAmountCents: line.unitPriceCents,

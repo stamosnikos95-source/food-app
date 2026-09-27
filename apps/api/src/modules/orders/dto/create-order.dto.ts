@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsInt, IsString, Max, MaxLength, Min, ValidateNested } from "class-validator";
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsInt, IsOptional, IsString, Max, MaxLength, Min, ValidateNested } from "class-validator";
 
 export class OrderItemInput {
   @IsString()
@@ -19,4 +19,16 @@ export class CreateOrderDto {
   @ValidateNested({ each: true })
   @Type(() => OrderItemInput)
   items!: OrderItemInput[];
+
+  /** Portions to pay with meal-plan credits (M8). */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(30)
+  subscriptionMeals?: number;
+
+  /** Spend one loyalty reward on this order (M8). */
+  @IsOptional()
+  @IsBoolean()
+  redeemPoints?: boolean;
 }
