@@ -1,5 +1,7 @@
 import { Type } from "class-transformer";
+import { ALLERGEN_CODES } from "@food-app/shared-types";
 import {
+  ArrayUnique,
   IsArray,
   IsIn,
   IsInt,
@@ -60,4 +62,11 @@ export class UpdateProfileDto {
   @IsArray()
   @IsString({ each: true })
   excludedIngredients?: string[];
+
+  /** EU allergen codes the customer must never be recommended. */
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsIn(ALLERGEN_CODES as string[], { each: true })
+  excludedAllergens?: string[];
 }

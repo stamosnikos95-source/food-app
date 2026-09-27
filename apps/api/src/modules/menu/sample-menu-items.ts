@@ -27,6 +27,7 @@ export const SAMPLE_MENU_ITEMS = [
   },
   {
     id: "seed-vegan-fakes",
+    dietTags: ["vegan", "vegetarian"],
     allergens: ["sesame"],
     name: "Vegan bowl με φακές",
     description: "Φακές, καστανό ρύζι, λαχανικά εποχής, ταχίνι",
@@ -63,6 +64,7 @@ export const SAMPLE_MENU_ITEMS = [
   },
   {
     id: "seed-buddha-bowl",
+    dietTags: ["vegan", "vegetarian"],
     allergens: ["sesame"],
     name: "Buddha bowl λαχανικών",
     description: "Ψητά λαχανικά εποχής, χούμους, κινόα, σπόροι",

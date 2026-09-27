@@ -5,6 +5,7 @@ import { envValidationSchema } from "./config/env.validation";
 import { PrismaModule } from "./prisma/prisma.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { UsersModule } from "./modules/users/users.module";
+import { RecommendationsModule } from "./modules/recommendations/recommendations.module";
 import { MenuModule } from "./modules/menu/menu.module";
 import { OrdersModule } from "./modules/orders/orders.module";
 import { PaymentsModule } from "./modules/payments/payments.module";
@@ -23,6 +24,7 @@ import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
     AuditModule,
     AuthModule,
     UsersModule,
+    RecommendationsModule,
     MenuModule,
     OrdersModule,
     PaymentsModule,

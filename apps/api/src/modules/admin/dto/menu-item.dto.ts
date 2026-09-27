@@ -13,7 +13,7 @@ import {
   MaxLength,
   Min,
 } from "class-validator";
-import { ALLERGEN_CODES } from "@food-app/shared-types";
+import { ALLERGEN_CODES, DIET_TAG_CODES } from "@food-app/shared-types";
 
 export class CreateMenuItemDto {
   @IsString()
@@ -64,6 +64,12 @@ export class CreateMenuItemDto {
   @ArrayUnique()
   @IsIn(ALLERGEN_CODES as string[], { each: true })
   allergens!: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsIn(DIET_TAG_CODES as string[], { each: true })
+  dietTags?: string[];
 
   @IsOptional()
   @IsBoolean()

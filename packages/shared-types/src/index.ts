@@ -86,3 +86,19 @@ export function allergenLabel(code: string): string {
 export function pickupCode(orderId: string): string {
   return orderId.replace(/-/g, "").slice(0, 6).toUpperCase();
 }
+
+/** Dish labels an admin sets explicitly. Never inferred from dish names. */
+export const DIET_TAGS = [
+  { code: "vegetarian", label: "Χορτοφαγικό" },
+  { code: "vegan", label: "Vegan" },
+] as const;
+export type DietTag = (typeof DIET_TAGS)[number]["code"];
+export const DIET_TAG_CODES: readonly string[] = DIET_TAGS.map((t) => t.code);
+
+export const MEAL_GOALS = [
+  { code: "lose_weight", label: "Απώλεια βάρους" },
+  { code: "maintain", label: "Διατήρηση βάρους" },
+  { code: "gain_muscle", label: "Μυϊκή μάζα" },
+  { code: "eat_healthier", label: "Πιο ισορροπημένη διατροφή" },
+] as const;
+export type MealGoal = (typeof MEAL_GOALS)[number]["code"];

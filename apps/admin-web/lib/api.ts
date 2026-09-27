@@ -33,6 +33,7 @@ export interface AdminMenuItem {
   carbsG: number;
   fatG: number;
   allergens: string[];
+  dietTags: string[];
   isActive: boolean;
 }
 

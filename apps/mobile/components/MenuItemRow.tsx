@@ -41,7 +41,10 @@ export function MenuItemRow({ item, quantity, onAdd, onRemove }: MenuItemRowProp
       </Text>
 
       <View style={styles.footerLine}>
-        <Text style={styles.portion}>Μερίδα {item.portionWeightG}g</Text>
+        <Text style={styles.portion}>
+          Μερίδα {item.portionWeightG}g
+          {item.dietTags?.includes("vegan") ? " · Vegan" : item.dietTags?.includes("vegetarian") ? " · Χορτοφαγικό" : ""}
+        </Text>
         <QuantityControl
           quantity={quantity}
           itemName={item.name}

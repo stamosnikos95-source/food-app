@@ -1,25 +1,26 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { ALLERGENS, allergenLabel } from "@food-app/shared-types";
+import { ALLERGENS, allergenLabel, DIET_TAGS } from "@food-app/shared-types";
 import { AdminMenuItem, api, describeError, MenuItemInput } from "../../lib/api";
 import { formatPrice, parseDecimal, parseEurosToCents } from "../../lib/format";
 import { useSession } from "../../lib/session";
 
 type Draft = Record<"name" | "description" | "category" | "price" | "portion" | "calories" | "protein" | "carbs" | "fat", string> & {
   allergens: string[];
+  dietTags: string[];
   isActive: boolean;
 };
 
 const EMPTY: Draft = { name: "", description: "", category: "", price: "", portion: "", calories: "",
-  protein: "", carbs: "", fat: "", allergens: [], isActive: true };
+  protein: "", carbs: "", fat: "", allergens: [], dietTags: [], isActive: true };
 
 const toDraft = (i: AdminMenuItem): Draft => ({
   name: i.name, description: i.description ?? "", category: i.category ?? "",
   price: (i.priceCents / 100).toFixed(2).replace(".", ","), portion: String(i.portionWeightG),
   calories: String(i.calories), protein: String(i.proteinG).replace(".", ","),
   carbs: String(i.carbsG).replace(".", ","), fat: String(i.fatG).replace(".", ","),
-  allergens: i.allergens, isActive: i.isActive,
+  allergens: i.allergens, dietTags: i.dietTags ?? [], isActive: i.isActive,
 });
 
 function fromDraft(d: Draft): MenuItemInput | string {
@@ -42,6 +43,7 @@ function fromDraft(d: Draft): MenuItemInput | string {
     carbsG: Math.round(numbers.carbsG! * 10) / 10,
     fatG: Math.round(numbers.fatG! * 10) / 10,
     allergens: d.allergens,
+    dietTags: d.dietTags,
     isActive: d.isActive,
   };
 }
@@ -153,6 +155,19 @@ export default function MenuPage() {
               ))}
             </div>
           </fieldset>
+          <fieldset style={{ border: 0, padding: 0, marginTop: 16 }}>
+            <legend className="legend">Διατροφή (οι προτάσεις βασίζονται μόνο σε αυτή τη σήμανση)</legend>
+            <div className="checks">
+              {DIET_TAGS.map((t) => (
+                <label key={t.code} className="check">
+                  <input type="checkbox" checked={editing.draft.dietTags.includes(t.code)}
+                    onChange={(e) => setEditing({ ...editing, draft: { ...editing.draft, dietTags: e.target.checked
+                      ? [...editing.draft.dietTags, t.code] : editing.draft.dietTags.filter((x) => x !== t.code) } })} />
+                  {t.label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <div className="editor-actions">
             <button className="btn btn-primary" disabled={saving}>{saving ? "Αποθήκευση…" : "Αποθήκευση"}</button>
             <button type="button" className="btn btn-secondary" onClick={() => { setEditing(null); setError(null); }}>Άκυρο</button>
@@ -174,7 +189,7 @@ export default function MenuPage() {
             <tbody>
               {items.map((item) => (
                 <tr key={item.id} className={item.isActive ? "" : "inactive"}>
-                  <td className="cell-dish"><div className="dish">{item.name}</div><div className="muted" style={{ fontSize: 13 }}>{item.category ?? ""}</div></td>
+                  <td className="cell-dish"><div className="dish">{item.name}</div><div className="muted" style={{ fontSize: 13 }}>{[item.category, ...(item.dietTags ?? []).map((c) => DIET_TAGS.find((t) => t.code === c)?.label ?? c)].filter(Boolean).join(" · ")}</div></td>
                   <td className="cell-price">{formatPrice(item.priceCents)}</td>
                   <td className="cell-nutrition" style={{ whiteSpace: "nowrap", fontSize: 14 }}>{item.calories} kcal · {item.portionWeightG}g<br />
                     <span className="muted">Π {item.proteinG} · Υ {item.carbsG} · Λ {item.fatG}</span></td>

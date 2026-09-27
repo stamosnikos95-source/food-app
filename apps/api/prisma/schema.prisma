@@ -45,6 +45,7 @@ model CustomerProfile {
   budgetPerMealCents  Int?
   dietaryPreferences  String[] @default([])
   excludedIngredients String[] @default([])
+  excludedAllergens   String[] @default([])
   updatedAt           DateTime @updatedAt
 
   @@map("customer_profiles")
@@ -63,6 +64,8 @@ model MenuItem {
   imageUrl       String?
   // EU 1169/2011 allergen codes (see ALLERGENS in @food-app/shared-types).
   allergens      String[] @default([])
+  // Explicit admin labels (see DIET_TAGS); recommendations rely on them.
+  dietTags       String[] @default([])
   category       String?
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())

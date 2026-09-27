@@ -63,6 +63,7 @@ export interface Profile {
   budgetPerMealCents: number | null;
   dietaryPreferences: string[];
   excludedIngredients: string[];
+  excludedAllergens: string[];
 }
 
 export interface MenuItem {
@@ -78,6 +79,7 @@ export interface MenuItem {
   imageUrl: string | null;
   isActive: boolean;
   allergens: string[];
+  dietTags: string[];
   category: string | null;
 }
 
@@ -97,7 +99,25 @@ export interface Order {
   items: OrderItem[];
 }
 
+export interface RankedItem {
+  item: MenuItem;
+  score: number;
+  reasons: string[];
+}
+
+export interface Recommendation {
+  mealTargetKcal: number | null;
+  goal: string;
+  profileComplete: boolean;
+  picks: RankedItem[];
+  others: RankedItem[];
+  excluded: { item: MenuItem; reasons: string[] }[];
+}
+
 export const api = {
+  getRecommendations: (accessToken: string) =>
+    request<Recommendation>("/recommendations/today", { accessToken }),
+
   register: (email: string, password: string) =>
     request<TokenPair>("/auth/register", { method: "POST", body: { email, password } }),
 

@@ -37,6 +37,7 @@ export class UsersService {
         budgetPerMealCents: null,
         dietaryPreferences: [] as string[],
         excludedIngredients: [] as string[],
+        excludedAllergens: [] as string[],
       }
     );
   }

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ALLERGENS, MEAL_GOALS } from "@food-app/shared-types";
 import { Field } from "../components/Field";
+import { ChipGroup } from "../components/ChipGroup";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { Screen } from "../components/Screen";
 import { useAuth } from "../auth/AuthContext";
@@ -9,13 +11,29 @@ import { describeError } from "../api/errors";
 import { parseDecimal, upperGreek } from "../lib/format";
 import { theme } from "../theme";
 
-const ACTIVITY_LEVELS: { value: string; label: string }[] = [
+const ACTIVITY_LEVELS = [
   { value: "sedentary", label: "Καθιστική ζωή" },
   { value: "light", label: "Ελαφριά δραστηριότητα" },
   { value: "moderate", label: "Μέτρια δραστηριότητα" },
-  { value: "active", label: "Δραστήριος" },
-  { value: "very_active", label: "Πολύ δραστήριος" },
+  { value: "active", label: "Δραστήριος/α" },
+  { value: "very_active", label: "Πολύ δραστήριος/α" },
 ];
+const GENDERS = [
+  { value: "female", label: "Γυναίκα" },
+  { value: "male", label: "Άνδρας" },
+  { value: "", label: "Δεν δηλώνω" },
+];
+const DIETS = [
+  { value: "", label: "Τρώω απ' όλα" },
+  { value: "vegetarian", label: "Χορτοφάγος" },
+  { value: "vegan", label: "Vegan" },
+];
+const DIET_CODES = ["vegetarian", "vegan"];
+const GOAL_OPTIONS = MEAL_GOALS.map((g) => ({ value: g.code, label: g.label }));
+const ALLERGEN_OPTIONS = ALLERGENS.map((a) => ({ value: a.code, label: a.label }));
+
+const commaNumber = (n: number | null) => (n == null ? "" : String(n).replace(".", ","));
+const splitList = (text: string) => text.split(",").map((s) => s.trim()).filter(Boolean);
 
 export function ProfileScreen() {
   const { withAuth, logout } = useAuth();
@@ -25,61 +43,66 @@ export function ProfileScreen() {
   const [saved, setSaved] = useState(false);
 
   const [age, setAge] = useState("");
+  const [gender, setGender] = useState("");
   const [heightCm, setHeightCm] = useState("");
   const [weightKg, setWeightKg] = useState("");
   const [activityLevel, setActivityLevel] = useState<string | null>(null);
-  const [goal, setGoal] = useState("");
+  const [goal, setGoal] = useState<string | null>(null);
+  const [diet, setDiet] = useState("");
+  const [excludedAllergens, setExcludedAllergens] = useState<string[]>([]);
+  const [otherExclusions, setOtherExclusions] = useState("");
+  const [otherPreferences, setOtherPreferences] = useState("");
   const [budgetEuros, setBudgetEuros] = useState("");
-  const [dietaryPreferences, setDietaryPreferences] = useState("");
-  const [excludedIngredients, setExcludedIngredients] = useState("");
 
   useEffect(() => {
     withAuth((token) => api.getProfile(token))
-      .then((profile: Profile) => {
-        setAge(profile.age?.toString() ?? "");
-        setHeightCm(profile.heightCm?.toString() ?? "");
-        setActivityLevel(profile.activityLevel);
-        setGoal(profile.goal ?? "");
-        setBudgetEuros(
-          profile.budgetPerMealCents != null
-            ? (profile.budgetPerMealCents / 100).toFixed(2).replace(".", ",")
-            : "",
-        );
-        setWeightKg(profile.weightKg != null ? String(profile.weightKg).replace(".", ",") : "");
-        setDietaryPreferences(profile.dietaryPreferences.join(", "));
-        setExcludedIngredients(profile.excludedIngredients.join(", "));
+      .then((p: Profile) => {
+        setAge(p.age?.toString() ?? "");
+        setGender(p.gender ?? "");
+        setHeightCm(p.heightCm?.toString() ?? "");
+        setWeightKg(commaNumber(p.weightKg));
+        setActivityLevel(p.activityLevel);
+        setGoal(p.goal);
+        setDiet(p.dietaryPreferences.find((d) => DIET_CODES.includes(d)) ?? "");
+        setOtherPreferences(p.dietaryPreferences.filter((d) => !DIET_CODES.includes(d)).join(", "));
+        setExcludedAllergens(p.excludedAllergens ?? []);
+        setOtherExclusions(p.excludedIngredients.join(", "));
+        setBudgetEuros(p.budgetPerMealCents != null ? (p.budgetPerMealCents / 100).toFixed(2).replace(".", ",") : "");
       })
       .catch((e) => setError(describeError(e)))
       .finally(() => setLoading(false));
   }, [withAuth]);
 
+  function touch<T>(setter: (v: T) => void) {
+    return (v: T) => {
+      setSaved(false);
+      setter(v);
+    };
+  }
+
   async function handleSave() {
     setError(null);
     setSaved(false);
-    setSaving(true);
-    // Greek keyboards type decimal commas ("8,50"); parse them explicitly,
-    // otherwise Number("8,50") is NaN and the value is silently dropped.
+    // Greek keyboards type decimal commas ("8,50"): parse them explicitly.
     const budget = parseDecimal(budgetEuros);
     const parsedAge = parseDecimal(age);
     const parsedHeight = parseDecimal(heightCm);
+    setSaving(true);
     try {
-      const patch = {
-        age: parsedAge !== undefined ? Math.round(parsedAge) : undefined,
-        heightCm: parsedHeight !== undefined ? Math.round(parsedHeight) : undefined,
-        weightKg: parseDecimal(weightKg),
-        activityLevel: activityLevel ?? undefined,
-        goal: goal || undefined,
-        budgetPerMealCents: budget !== undefined ? Math.round(budget * 100) : undefined,
-        dietaryPreferences: dietaryPreferences
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
-        excludedIngredients: excludedIngredients
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
-      };
-      await withAuth((token) => api.updateProfile(token, patch));
+      await withAuth((token) =>
+        api.updateProfile(token, {
+          age: parsedAge !== undefined ? Math.round(parsedAge) : undefined,
+          gender: gender || null,
+          heightCm: parsedHeight !== undefined ? Math.round(parsedHeight) : undefined,
+          weightKg: parseDecimal(weightKg),
+          activityLevel: activityLevel ?? undefined,
+          goal: goal ?? undefined,
+          budgetPerMealCents: budget !== undefined ? Math.round(budget * 100) : undefined,
+          dietaryPreferences: [...(diet ? [diet] : []), ...splitList(otherPreferences)],
+          excludedAllergens,
+          excludedIngredients: splitList(otherExclusions),
+        }),
+      );
       setSaved(true);
     } catch (e) {
       setError(
@@ -104,166 +127,116 @@ export function ProfileScreen() {
 
   return (
     <Screen>
-    <ScrollView style={styles.flex} contentContainerStyle={styles.container}>
-      <Text style={styles.title} accessibilityRole="header">
-        Το προφίλ μου
-      </Text>
-      <Text style={styles.intro}>
-        Με αυτά τα στοιχεία ο βοηθός θα προτείνει πιάτα από το μενού. Όλα είναι προαιρετικά.
-      </Text>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <Text style={styles.title} accessibilityRole="header">
+          Το προφίλ μου
+        </Text>
+        <Text style={styles.intro}>
+          Με αυτά ο βοηθός διαλέγει πιάτα για σένα. Όλα είναι προαιρετικά, και οι προτάσεις είναι
+          ενδεικτικές — όχι ιατρική ή διαιτολογική συμβουλή.
+        </Text>
 
-      <Text style={styles.sectionLabel}>{upperGreek("Σωματικά στοιχεία")}</Text>
+        <Text style={styles.section}>{upperGreek("Σωματικά στοιχεία")}</Text>
+        <Field label="Ηλικία" value={age} onChangeText={touch(setAge)} keyboardType="number-pad" />
+        <ChipGroup label="Φύλο" options={GENDERS} isSelected={(v) => v === gender} onPress={touch(setGender)} />
+        <Field label="Ύψος (cm)" value={heightCm} onChangeText={touch(setHeightCm)} keyboardType="number-pad" />
+        <Field label="Βάρος (kg)" value={weightKg} onChangeText={touch(setWeightKg)} keyboardType="decimal-pad" />
+        <ChipGroup
+          label="Επίπεδο δραστηριότητας"
+          options={ACTIVITY_LEVELS}
+          isSelected={(v) => v === activityLevel}
+          onPress={touch(setActivityLevel)}
+        />
 
-      <Field label="Ηλικία" value={age} onChangeText={setAge} keyboardType="number-pad" />
-      <Field
-        label="Ύψος (cm)"
-        value={heightCm}
-        onChangeText={setHeightCm}
-        keyboardType="number-pad"
-      />
-      <Field
-        label="Βάρος (kg)"
-        value={weightKg}
-        onChangeText={setWeightKg}
-        keyboardType="decimal-pad"
-      />
+        <Text style={styles.section}>{upperGreek("Στόχος")}</Text>
+        <ChipGroup label="Τι θέλεις να πετύχεις;" options={GOAL_OPTIONS} isSelected={(v) => v === goal} onPress={touch(setGoal)} />
 
-      <Text style={styles.label}>Επίπεδο δραστηριότητας</Text>
-      <View style={styles.chipRow}>
-        {ACTIVITY_LEVELS.map((level) => {
-          const selected = activityLevel === level.value;
-          return (
-            <Pressable
-              key={level.value}
-              onPress={() => setActivityLevel(level.value)}
-              style={[styles.chip, selected && styles.chipSelected]}
-            >
-              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-                {level.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+        <Text style={styles.section}>{upperGreek("Διατροφή")}</Text>
+        <ChipGroup label="Διατροφή" options={DIETS} isSelected={(v) => v === diet} onPress={touch(setDiet)} />
+        <ChipGroup
+          label="Αλλεργίες & δυσανεξίες"
+          hint="Πιάτα που τα περιέχουν δεν θα σου προτείνονται ποτέ. Για σοβαρή αλλεργία, επιβεβαίωνε και με το κατάστημα."
+          options={ALLERGEN_OPTIONS}
+          isSelected={(v) => excludedAllergens.includes(v)}
+          onPress={(v) => {
+            setSaved(false);
+            setExcludedAllergens((cur) => (cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]));
+          }}
+        />
+        <Field
+          label="Άλλα που δεν τρως"
+          value={otherExclusions}
+          onChangeText={touch(setOtherExclusions)}
+          placeholder="π.χ. μανιτάρια, κόλιανδρος"
+        />
+        <Field
+          label="Άλλες προτιμήσεις"
+          value={otherPreferences}
+          onChangeText={touch(setOtherPreferences)}
+          placeholder="π.χ. λιγότερο αλάτι"
+        />
 
-      <Text style={styles.sectionLabel}>{upperGreek("Στόχοι & προτιμήσεις")}</Text>
-      <Field
-        label="Στόχος"
-        value={goal}
-        onChangeText={setGoal}
-        placeholder="π.χ. απώλεια βάρους, μυϊκή μάζα, ισορροπία"
-      />
-      <Field
-        label="Budget ανά γεύμα (€)"
-        value={budgetEuros}
-        onChangeText={setBudgetEuros}
-        keyboardType="decimal-pad"
-        placeholder="π.χ. 8.50"
-      />
-      <Field
-        label="Διατροφικές προτιμήσεις"
-        value={dietaryPreferences}
-        onChangeText={setDietaryPreferences}
-        placeholder="π.χ. vegetarian, χωρίς λακτόζη"
-      />
-      <Field
-        label="Αποκλεισμοί"
-        value={excludedIngredients}
-        onChangeText={setExcludedIngredients}
-        placeholder="π.χ. θαλασσινά, ξηροί καρποί"
-      />
+        <Text style={styles.section}>{upperGreek("Budget")}</Text>
+        <Field
+          label="Μέχρι πόσα θέλεις να δίνεις ανά γεύμα (€)"
+          value={budgetEuros}
+          onChangeText={touch(setBudgetEuros)}
+          keyboardType="decimal-pad"
+          placeholder="π.χ. 9,00"
+        />
 
-      {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
-      {saved ? <Text style={styles.savedBanner}>Αποθηκεύτηκε</Text> : null}
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {saved ? <Text style={styles.saved}>Αποθηκεύτηκε — οι προτάσεις ενημερώθηκαν.</Text> : null}
 
-      <PrimaryButton title="Αποθήκευση" onPress={handleSave} loading={saving} />
-      <View style={styles.logoutSpacing}>
-        <PrimaryButton title="Αποσύνδεση" onPress={logout} variant="secondary" />
-      </View>
-    </ScrollView>
+        <PrimaryButton title="Αποθήκευση" onPress={handleSave} loading={saving} />
+        <View style={styles.logoutSpacing}>
+          <PrimaryButton title="Αποσύνδεση" onPress={logout} variant="secondary" />
+        </View>
+      </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: theme.color.background },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.color.background,
-  },
+  centered: { flex: 1, alignItems: "center", justifyContent: "center" },
   container: {
     paddingHorizontal: theme.space.lg,
     paddingTop: theme.space.xl,
     paddingBottom: theme.space["2xl"],
-  },
-  intro: {
-    fontFamily: theme.typography.fontBody,
-    fontSize: theme.typography.scale.sm,
-    lineHeight: 21,
-    color: theme.color.textSecondary,
-    marginBottom: theme.space.lg,
-  },
-  sectionLabel: {
-    fontFamily: theme.typography.fontBodyMedium,
-    fontSize: theme.typography.scale.xs,
-    letterSpacing: 1.2,
-    color: theme.color.textMuted,
-    marginTop: theme.space.sm,
-    marginBottom: theme.space.md,
   },
   title: {
     fontFamily: theme.typography.fontDisplay,
     fontSize: theme.typography.scale["2xl"],
     lineHeight: 38,
     color: theme.color.textPrimary,
-    marginBottom: theme.space.xs,
   },
-  label: {
+  intro: {
     fontFamily: theme.typography.fontBody,
     fontSize: theme.typography.scale.sm,
+    lineHeight: 21,
     color: theme.color.textSecondary,
-    marginBottom: theme.space.xs,
-  },
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: theme.space.xs,
+    marginTop: theme.space.xs,
     marginBottom: theme.space.md,
   },
-  chip: {
-    borderWidth: 1,
-    borderColor: theme.color.border,
-    borderRadius: theme.radius.pill,
-    paddingHorizontal: theme.space.md,
-    paddingVertical: theme.space.xs + 2,
-    backgroundColor: theme.color.surface,
+  section: {
+    fontFamily: theme.typography.fontBodyMedium,
+    fontSize: theme.typography.scale.xs,
+    letterSpacing: 1.2,
+    color: theme.color.textMuted,
+    marginTop: theme.space.md,
+    marginBottom: theme.space.md,
   },
-  chipSelected: {
-    backgroundColor: theme.color.accentSoft,
-    borderColor: theme.color.accent,
-  },
-  chipText: {
+  error: {
     fontFamily: theme.typography.fontBody,
     fontSize: theme.typography.scale.sm,
-    color: theme.color.textSecondary,
-  },
-  chipTextSelected: {
-    fontFamily: theme.typography.fontBodyMedium,
-    color: theme.color.accentStrong,
-  },
-  errorBanner: {
-    fontFamily: theme.typography.fontBody,
+    lineHeight: 20,
     color: theme.color.danger,
     marginBottom: theme.space.md,
   },
-  savedBanner: {
-    fontFamily: theme.typography.fontBody,
+  saved: {
+    fontFamily: theme.typography.fontBodyMedium,
     color: theme.color.success,
     marginBottom: theme.space.md,
   },
-  logoutSpacing: {
-    marginTop: theme.space.md,
-  },
+  logoutSpacing: { marginTop: theme.space.md },
 });
