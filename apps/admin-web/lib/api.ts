@@ -41,6 +41,40 @@ export type MenuItemInput = Omit<AdminMenuItem, "id" | "description" | "category
   category?: string;
 };
 
+export interface Ingredient {
+  id: string;
+  name: string;
+  costPerKgCents: number;
+  kcalPer100g: number;
+  proteinPer100g: number;
+  carbsPer100g: number;
+  fatPer100g: number;
+  allergens: string[];
+  isActive: boolean;
+}
+export type IngredientInput = Omit<Ingredient, "id">;
+export interface RecipeView {
+  id: string;
+  name: string;
+  yieldPortions: number;
+  notes: string | null;
+  menuItem: { id: string; name: string; priceCents: number } | null;
+  lines: { ingredientId: string; name: string; grams: number; costCents: number }[];
+  costing: {
+    batchWeightG: number;
+    perPortion: { weightG: number; calories: number; proteinG: number; carbsG: number; fatG: number; costCents: number };
+    allergens: string[];
+  };
+  vatPercent: number;
+  foodCostPercent: number | null;
+}
+export interface RecipeInput {
+  name: string;
+  yieldPortions: number;
+  menuItemId: string | null;
+  notes?: string;
+  lines: { ingredientId: string; grams: number }[];
+}
 export interface SalesSummary {
   orders: number;
   revenueCents: number;
@@ -89,6 +123,20 @@ export const api = {
     request<AdminMenuItem>("/admin/menu", { method: "POST", body, token }),
   updateMenuItem: (token: string, id: string, body: Partial<MenuItemInput>) =>
     request<AdminMenuItem>(`/admin/menu/${id}`, { method: "PATCH", body, token }),
+
+  ingredients: (token: string) => request<Ingredient[]>("/admin/ingredients", { token }),
+  createIngredient: (token: string, body: IngredientInput) =>
+    request<Ingredient>("/admin/ingredients", { method: "POST", body, token }),
+  updateIngredient: (token: string, id: string, body: Partial<IngredientInput>) =>
+    request<Ingredient>(`/admin/ingredients/${id}`, { method: "PATCH", body, token }),
+
+  recipes: (token: string) => request<RecipeView[]>("/admin/recipes", { token }),
+  createRecipe: (token: string, body: RecipeInput) =>
+    request<RecipeView>("/admin/recipes", { method: "POST", body, token }),
+  updateRecipe: (token: string, id: string, body: Partial<RecipeInput>) =>
+    request<RecipeView>(`/admin/recipes/${id}`, { method: "PATCH", body, token }),
+  applyRecipe: (token: string, id: string) =>
+    request<AdminMenuItem>(`/admin/recipes/${id}/apply-to-menu`, { method: "POST", token }),
 
   summary: (token: string, from: Date, to: Date) =>
     request<SalesSummary>(

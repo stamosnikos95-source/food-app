@@ -10,6 +10,8 @@ const NAV = [
   { href: "/", label: "Παραγγελίες" },
   { href: "/menu/", label: "Μενού" },
   { href: "/reports/", label: "Αναφορές" },
+  { href: "/ingredients/", label: "Υλικά", adminOnly: true },
+  { href: "/recipes/", label: "Συνταγές", adminOnly: true },
 ];
 
 function LoginScreen() {
@@ -60,7 +62,7 @@ function LoginScreen() {
 }
 
 function Frame({ children }: { children: ReactNode }) {
-  const { ready, identity, logout } = useSession();
+  const { ready, identity, logout, isAdmin } = useSession();
   const pathname = usePathname();
 
   if (!ready) return <div className="center">Φόρτωση…</div>;
@@ -71,7 +73,7 @@ function Frame({ children }: { children: ReactNode }) {
       <header className="topbar">
         <div className="brand">Food App<small>ΔΙΑΧΕΙΡΙΣΗ</small></div>
         <nav className="nav" aria-label="Κύρια πλοήγηση">
-          {NAV.map((item) => (
+          {NAV.filter((item) => !("adminOnly" in item) || isAdmin).map((item) => (
             <Link key={item.href} href={item.href} aria-current={pathname === item.href ? "page" : undefined}>
               {item.label}
             </Link>
