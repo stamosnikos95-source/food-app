@@ -17,6 +17,7 @@ const NAV = [
   { href: "/customers/", label: "Πελάτες", adminOnly: true },
   { href: "/companies/", label: "Εταιρείες", adminOnly: true },
   { href: "/subscriptions/", label: "Συνδρομές", adminOnly: true },
+  { href: "/gyms/", label: "Γυμναστήρια", adminOnly: true },
 ];
 
 function LoginScreen() {

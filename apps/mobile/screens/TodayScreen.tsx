@@ -8,6 +8,7 @@ import { describeError } from "../api/errors";
 import { Screen } from "../components/Screen";
 import { MenuItemRow } from "../components/MenuItemRow";
 import { CartBar } from "../components/CartBar";
+import { GymBanner } from "../gym/GymBanner";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
 import { formatLongDate, pluralDishes, upperGreek } from "../lib/format";
@@ -59,6 +60,7 @@ export function TodayScreen() {
         contentContainerStyle={[styles.list, cart.totalCount > 0 && styles.listAboveCartBar]}
         ListHeaderComponent={
           <View style={styles.header}>
+            <GymBanner />
             <Text style={styles.eyebrow}>{upperGreek(formatLongDate(new Date()))}</Text>
             <Text style={styles.title} accessibilityRole="header">
               Το μενού της ημέρας

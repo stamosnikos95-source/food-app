@@ -5,6 +5,7 @@ import { PrimaryButton } from "../components/PrimaryButton";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../auth/AuthContext";
 import { describeError } from "../api/errors";
+import { GymBanner } from "../gym/GymBanner";
 import { theme } from "../theme";
 
 interface LoginScreenProps {
@@ -42,6 +43,7 @@ export function LoginScreen({ onSwitchToRegister }: LoginScreenProps) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <GymBanner />
         <Text style={styles.eyebrow}>Food App</Text>
         <Text style={styles.title} accessibilityRole="header">Καλώς ήρθες πίσω</Text>
         <Text style={styles.subtitle}>Συνδέσου για να δεις το σημερινό μενού.</Text>

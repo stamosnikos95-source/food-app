@@ -21,6 +21,9 @@ export interface AdminOrder {
   companyPaidCents?: number;
   subscriptionCoveredCents?: number;
   loyaltyDiscountCents?: number;
+  gymDiscountCents?: number;
+  fulfillment?: "store" | "gym";
+  gym?: { name: string } | null;
   items: { id: string; quantity: number; menuItem: { name: string; allergens: string[] } }[];
 }
 
@@ -181,6 +184,38 @@ export interface AdminSubscription {
   plan: Plan;
   user: { email: string };
 }
+export interface GymCode {
+  id: string;
+  gymId: string;
+  code: string;
+  label: string;
+  isActive: boolean;
+  scans: number;
+  url: string;
+}
+export interface GymFields {
+  name: string;
+  address: string | null;
+  contactName: string | null;
+  phone: string | null;
+  email: string | null;
+  discountPercent: number;
+  commissionPercent: number;
+  deliveryEnabled: boolean;
+  deliveryNote: string | null;
+  isActive: boolean;
+}
+export interface Gym extends GymFields { id: string; orders: number; codes: GymCode[] }
+export interface GymReport {
+  gym: { id: string; name: string; commissionPercent: number; discountPercent: number };
+  month: string;
+  orders: number;
+  deliveredToGym: number;
+  netSalesCents: number;
+  memberDiscountCents: number;
+  commissionCents: number;
+  codes: { id: string; label: string; isActive: boolean; scans: number; orders: number }[];
+}
 export interface SalesSummary {
   orders: number;
   revenueCents: number;
@@ -286,6 +321,15 @@ export const api = {
   cancelSubscription: (token: string, id: string) => request<AdminSubscription>(`/admin/subscriptions/${id}/cancel`, { method: "POST", token }),
   adjustPoints: (token: string, customerId: string, points: number, note: string) =>
     request<{ balance: number }>(`/admin/customers/${customerId}/points`, { method: "POST", body: { points, note }, token }),
+
+  gyms: (token: string) => request<Gym[]>("/admin/gyms", { token }),
+  createGym: (token: string, body: Partial<GymFields>) => request<Gym>("/admin/gyms", { method: "POST", body, token }),
+  updateGym: (token: string, id: string, body: Partial<GymFields>) => request<Gym>(`/admin/gyms/${id}`, { method: "PATCH", body, token }),
+  createGymCode: (token: string, gymId: string, label: string) =>
+    request<GymCode>(`/admin/gyms/${gymId}/codes`, { method: "POST", body: { label }, token }),
+  setGymCode: (token: string, codeId: string, isActive: boolean) =>
+    request<GymCode>(`/admin/gym-codes/${codeId}`, { method: "PATCH", body: { isActive }, token }),
+  gymReport: (token: string, gymId: string, month: string) => request<GymReport>(`/admin/gyms/${gymId}/report?month=${month}`, { token }),
 
   summary: (token: string, from: Date, to: Date) =>
     request<SalesSummary>(

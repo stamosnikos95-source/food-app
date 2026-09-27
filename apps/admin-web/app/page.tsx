@@ -17,9 +17,9 @@ const POLL_MS = 15_000;
 
 /** What the cashier collects at pickup, after meal plan, employer and loyalty discounts. */
 const toCollect = (o: AdminOrder) =>
-  o.totalPriceCents - (o.companyPaidCents ?? 0) - (o.subscriptionCoveredCents ?? 0) - (o.loyaltyDiscountCents ?? 0);
+  o.totalPriceCents - (o.companyPaidCents ?? 0) - (o.subscriptionCoveredCents ?? 0) - (o.gymDiscountCents ?? 0) - (o.loyaltyDiscountCents ?? 0);
 const discountNote = (o: AdminOrder) =>
-  [o.subscriptionCoveredCents ? "συνδρομή" : null, o.companyPaidCents ? "εταιρεία" : null, o.loyaltyDiscountCents ? "πόντοι" : null]
+  [o.subscriptionCoveredCents ? "συνδρομή" : null, o.companyPaidCents ? "εταιρεία" : null, o.gymDiscountCents ? "γυμναστήριο" : null, o.loyaltyDiscountCents ? "πόντοι" : null]
     .filter(Boolean)
     .join(", ");
 
@@ -120,6 +120,7 @@ export default function KitchenBoard() {
                       <div className="ticket-meta">
                         <span>
                           {formatPrice(order.totalPriceCents)} · {order.customerEmail}
+                          {order.fulfillment === "gym" && order.gym ? (<><br /><strong>Παράδοση: {order.gym.name}</strong></>) : order.gym ? (<><br /><span className="muted">Μέσω {order.gym.name}</span></>) : null}
                           {!order.paidOnline && toCollect(order) !== order.totalPriceCents ? (
                             <><br /><strong>Είσπραξη: {formatPrice(toCollect(order))}</strong> <span className="muted">({discountNote(order)})</span></>
                           ) : null}

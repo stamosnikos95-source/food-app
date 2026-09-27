@@ -3,7 +3,8 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../auth/AuthContext";
 import { useCart } from "../cart/CartContext";
-import { Allowance, api, LoyaltySummary, MySubscription, Order } from "../api/client";
+import { Allowance, api, ApiError, LoyaltySummary, MySubscription, Order } from "../api/client";
+import { useGym } from "../gym/GymContext";
 import { describeError } from "../api/errors";
 import { Screen } from "../components/Screen";
 import { PrimaryButton } from "../components/PrimaryButton";
@@ -60,10 +61,11 @@ function discountSummary(o: Order): string | null {
   const parts = [
     o.subscriptionCoveredCents > 0 ? `Συνδρομή −${formatPrice(o.subscriptionCoveredCents)}` : null,
     o.companyPaidCents > 0 ? `Εταιρεία −${formatPrice(o.companyPaidCents)}` : null,
+    o.gymDiscountCents > 0 ? `Γυμναστήριο −${formatPrice(o.gymDiscountCents)}` : null,
     o.loyaltyDiscountCents > 0 ? `Πόντοι −${formatPrice(o.loyaltyDiscountCents)}` : null,
   ].filter(Boolean);
   if (parts.length === 0) return null;
-  const paid = o.totalPriceCents - o.companyPaidCents - o.subscriptionCoveredCents - o.loyaltyDiscountCents;
+  const paid = o.totalPriceCents - o.companyPaidCents - o.subscriptionCoveredCents - o.gymDiscountCents - o.loyaltyDiscountCents;
   return `${parts.join(" · ")} · πλήρωσες ${formatPrice(paid)}`;
 }
 
@@ -76,6 +78,8 @@ export function OrdersScreen() {
   const [plan, setPlan] = useState<MySubscription | null>(null);
   const [usePlan, setUsePlan] = useState(true);
   const [redeem, setRedeem] = useState(false);
+  const { gym, clear: clearGym } = useGym();
+  const [deliverToGym, setDeliverToGym] = useState(false);
   const [placing, setPlacing] = useState<"card" | "store" | null>(null);
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -166,6 +170,11 @@ export function OrdersScreen() {
       cart.clear();
       await goToPayment(orderId);
     } catch (error) {
+      if (error instanceof ApiError && /gym/i.test(error.message)) {
+        clearGym();
+        setCheckoutError("Ο κωδικός του γυμναστηρίου δεν ισχύει πια — η παραγγελία μπορεί να γίνει κανονικά, χωρίς την έκπτωση.");
+        return;
+      }
       setCheckoutError(
         describeError(error, {
           400: "Κάποιο πιάτο δεν είναι πια διαθέσιμο. Αφαίρεσέ το και δοκίμασε ξανά.",
@@ -189,10 +198,15 @@ export function OrdersScreen() {
       setBanner({
         tone: "success",
         title: "Η παραγγελία στάλθηκε",
-        message: "Θα πληρώσεις κατά την παραλαβή από το κατάστημα.",
+        message: orderOptions.fulfillment === "gym" && gym ? `Θα παραδοθεί στο ${gym.name}${gym.deliveryNote ? ` (${gym.deliveryNote})` : ""}. Πληρωμή κατά την παράδοση.` : "Θα πληρώσεις κατά την παραλαβή από το κατάστημα.",
       });
       loadOrders();
     } catch (error) {
+      if (error instanceof ApiError && /gym/i.test(error.message)) {
+        clearGym();
+        setCheckoutError("Ο κωδικός του γυμναστηρίου δεν ισχύει πια — η παραγγελία μπορεί να γίνει κανονικά, χωρίς την έκπτωση.");
+        return;
+      }
       setCheckoutError(
         describeError(error, {
           400: "Κάποιο πιάτο δεν είναι πια διαθέσιμο. Αφαίρεσέ το και δοκίμασε ξανά.",
@@ -222,10 +236,17 @@ export function OrdersScreen() {
   const afterPlan = cart.totalCents - planCents;
   const subsidy = allowance ? Math.min(allowance.remainingTodayCents, afterPlan) : 0;
   const afterSubsidy = afterPlan - subsidy;
-  const canRedeem = Boolean(loyalty?.canRedeem) && afterSubsidy > 0;
-  const loyaltyCents = redeem && canRedeem && loyalty ? Math.min(loyalty.rewardValueCents, afterSubsidy) : 0;
-  const amountDue = afterSubsidy - loyaltyCents;
-  const orderOptions = { subscriptionMeals: planMeals || undefined, redeemPoints: loyaltyCents > 0 || undefined };
+  const gymCents = gym ? Math.floor((afterSubsidy * gym.discountPercent) / 100) : 0;
+  const afterGym = afterSubsidy - gymCents;
+  const canRedeem = Boolean(loyalty?.canRedeem) && afterGym > 0;
+  const loyaltyCents = redeem && canRedeem && loyalty ? Math.min(loyalty.rewardValueCents, afterGym) : 0;
+  const amountDue = afterGym - loyaltyCents;
+  const orderOptions = {
+    subscriptionMeals: planMeals || undefined,
+    redeemPoints: loyaltyCents > 0 || undefined,
+    gymCode: gym?.code,
+    fulfillment: gym?.deliveryEnabled && deliverToGym ? ("gym" as const) : ("store" as const),
+  };
 
   return (
     <Screen>
@@ -276,7 +297,15 @@ export function OrdersScreen() {
               <DiscountLine label={`Συνδρομή · ${planMeals} ${planMeals === 1 ? "γεύμα" : "γεύματα"}`} cents={planCents} />
             ) : null}
             {subsidy > 0 && allowance ? <DiscountLine label={`Επιδότηση ${allowance.companyName}`} cents={subsidy} /> : null}
+            {gymCents > 0 && gym ? <DiscountLine label={`Μέλος ${gym.name} (−${gym.discountPercent}%)`} cents={gymCents} /> : null}
             {loyaltyCents > 0 && loyalty ? <DiscountLine label={`Πόντοι (${loyalty.rewardPoints})`} cents={loyaltyCents} /> : null}
+            {gym?.deliveryEnabled ? (
+              <Toggle
+                label={`Παράδοση στο ${gym.name}${gym.deliveryNote ? ` · ${gym.deliveryNote}` : ""}`}
+                on={deliverToGym}
+                onPress={() => setDeliverToGym((v) => !v)}
+              />
+            ) : null}
             {amountDue !== cart.totalCents ? (
               <View style={styles.subsidyLine}>
                 <Text style={styles.totalLabel}>Πληρώνεις</Text>
@@ -284,9 +313,11 @@ export function OrdersScreen() {
               </View>
             ) : null}
             <Text style={styles.pickupNote}>
-              {paymentsEnabled
-                ? "Παραλαβή από το κατάστημα · πλήρωσε τώρα με κάρτα ή κατά την παραλαβή"
-                : "Παραλαβή από το κατάστημα · πληρωμή κατά την παραλαβή"}
+              {orderOptions.fulfillment === "gym" && gym
+                ? `Παράδοση στο ${gym.name}${gym.deliveryNote ? ` (${gym.deliveryNote})` : ""} · ${paymentsEnabled ? "πλήρωσε τώρα με κάρτα ή κατά την παράδοση" : "πληρωμή κατά την παράδοση"}`
+                : paymentsEnabled
+                  ? "Παραλαβή από το κατάστημα · πλήρωσε τώρα με κάρτα ή κατά την παραλαβή"
+                  : "Παραλαβή από το κατάστημα · πληρωμή κατά την παραλαβή"}
             </Text>
             {checkoutError ? <Text style={styles.error}>{checkoutError}</Text> : null}
             {/* Ordering never depends on online payments being configured:
@@ -302,7 +333,7 @@ export function OrdersScreen() {
                 />
                 <View style={styles.secondaryAction}>
                   <PrimaryButton
-                    title="Πληρωμή στο κατάστημα"
+                    title={orderOptions.fulfillment === "gym" ? "Πληρωμή κατά την παράδοση" : "Πληρωμή στο κατάστημα"}
                     onPress={placeOrderPayAtStore}
                     loading={placing === "store"}
                     disabled={placing !== null}

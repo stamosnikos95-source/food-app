@@ -101,6 +101,8 @@ export interface Order {
   subscriptionCoveredCents: number;
   loyaltyPointsRedeemed: number;
   loyaltyDiscountCents: number;
+  gymDiscountCents: number;
+  fulfillment: "store" | "gym";
   createdAt: string;
   items: OrderItem[];
 }
@@ -157,7 +159,17 @@ export interface Allowance {
   remainingTodayCents: number;
 }
 
+export interface GymInfo {
+  name: string;
+  discountPercent: number;
+  deliveryEnabled: boolean;
+  deliveryNote: string | null;
+}
+
 export const api = {
+  /** Public: no account needed to see which gym a QR code belongs to. */
+  lookupGym: (code: string) => request<{ code: string; gym: GymInfo }>(`/gyms/by-code/${encodeURIComponent(code)}`),
+
   getMyAllowance: (accessToken: string) =>
     request<{ allowance: Allowance | null }>("/companies/mine", { accessToken }),
 
@@ -187,7 +199,7 @@ export const api = {
   createOrder: (
     accessToken: string,
     items: { menuItemId: string; quantity: number }[],
-    options: { subscriptionMeals?: number; redeemPoints?: boolean } = {},
+    options: { subscriptionMeals?: number; redeemPoints?: boolean; gymCode?: string; fulfillment?: "store" | "gym" } = {},
   ) => request<Order>("/orders", { method: "POST", body: { items, ...options }, accessToken }),
 
   getLoyalty: (accessToken: string) => request<LoyaltySummary>("/loyalty/me", { accessToken }),

@@ -15,6 +15,7 @@ import { AssistantScreen } from "./screens/AssistantScreen";
 import { OrdersScreen } from "./screens/OrdersScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
 import { PerksScreen } from "./screens/PerksScreen";
+import { GymProvider } from "./gym/GymContext";
 
 const Tab = createBottomTabNavigator();
 
@@ -120,8 +121,10 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
+        <GymProvider>
         <StatusBar style="dark" />
         <RootNavigator />
+        </GymProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );
