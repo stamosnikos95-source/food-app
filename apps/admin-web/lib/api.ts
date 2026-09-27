@@ -18,6 +18,9 @@ export interface AdminOrder {
   createdAt: string;
   customerEmail: string;
   paidOnline: boolean;
+  companyPaidCents?: number;
+  subscriptionCoveredCents?: number;
+  loyaltyDiscountCents?: number;
   items: { id: string; quantity: number; menuItem: { name: string; allergens: string[] } }[];
 }
 
@@ -89,6 +92,7 @@ export interface AdminCustomer {
   lastOrderAt: string | null;
 }
 export interface AdminCustomerDetail extends AdminCustomer {
+  loyaltyPoints: number;
   recentOrders: {
     id: string;
     status: OrderStatus;
@@ -156,6 +160,26 @@ export interface WasteReport {
   dishes: { name: string; portions: number; costCents: number }[];
   ingredients: { name: string; grams: number; costCents: number }[];
   totals: { dishCostCents: number; ingredientCostCents: number; wastedPortions: number; producedPortions: number; wastePercent: number | null };
+}
+export interface Plan {
+  id: string;
+  name: string;
+  description: string | null;
+  mealsPerPeriod: number;
+  periodDays: number;
+  priceCents: number;
+  maxMealPriceCents: number;
+  isActive: boolean;
+}
+export interface AdminSubscription {
+  id: string;
+  status: "pending" | "active" | "cancelled";
+  mealsRemaining: number;
+  currentPeriodEnd: string | null;
+  lastPaidAt: string | null;
+  createdAt: string;
+  plan: Plan;
+  user: { email: string };
 }
 export interface SalesSummary {
   orders: number;
@@ -252,6 +276,16 @@ export const api = {
   recordLeftover: (token: string, body: { menuItemId: string; portions: number; reason: string; date?: string }) =>
     request<unknown>("/admin/production/leftovers", { method: "POST", body, token }),
   wasteReport: (token: string, days = 7) => request<WasteReport>(`/admin/waste?days=${days}`, { token }),
+
+  plans: (token: string) => request<Plan[]>("/admin/plans", { token }),
+  createPlan: (token: string, body: Omit<Plan, "id">) => request<Plan>("/admin/plans", { method: "POST", body, token }),
+  updatePlan: (token: string, id: string, body: Partial<Omit<Plan, "id">>) => request<Plan>(`/admin/plans/${id}`, { method: "PATCH", body, token }),
+  subscriptions: (token: string, status?: string) =>
+    request<AdminSubscription[]>(`/admin/subscriptions${status ? `?status=${status}` : ""}`, { token }),
+  activateSubscription: (token: string, id: string) => request<AdminSubscription>(`/admin/subscriptions/${id}/activate`, { method: "POST", token }),
+  cancelSubscription: (token: string, id: string) => request<AdminSubscription>(`/admin/subscriptions/${id}/cancel`, { method: "POST", token }),
+  adjustPoints: (token: string, customerId: string, points: number, note: string) =>
+    request<{ balance: number }>(`/admin/customers/${customerId}/points`, { method: "POST", body: { points, note }, token }),
 
   summary: (token: string, from: Date, to: Date) =>
     request<SalesSummary>(

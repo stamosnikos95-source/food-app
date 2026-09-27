@@ -97,6 +97,10 @@ export interface Order {
   totalPriceCents: number;
   /** Share paid by the customer's employer (M6); the customer paid the rest. */
   companyPaidCents: number;
+  subscriptionMeals: number;
+  subscriptionCoveredCents: number;
+  loyaltyPointsRedeemed: number;
+  loyaltyDiscountCents: number;
   createdAt: string;
   items: OrderItem[];
 }
@@ -114,6 +118,36 @@ export interface Recommendation {
   picks: RankedItem[];
   others: RankedItem[];
   excluded: { item: MenuItem; reasons: string[] }[];
+}
+
+export interface LoyaltySummary {
+  balance: number;
+  pointsPerEuro: number;
+  rewardPoints: number;
+  rewardValueCents: number;
+  canRedeem: boolean;
+  pointsToNextReward: number;
+  history: { id: string; type: "earn" | "redeem" | "reversal" | "adjustment"; points: number; createdAt: string }[];
+}
+
+export interface Plan {
+  id: string;
+  name: string;
+  description: string | null;
+  mealsPerPeriod: number;
+  periodDays: number;
+  priceCents: number;
+  maxMealPriceCents: number;
+}
+
+export interface MySubscription {
+  id: string;
+  status: "pending" | "active" | "cancelled";
+  mealsRemaining: number;
+  currentPeriodEnd: string | null;
+  usable: boolean;
+  expired: boolean;
+  plan: Plan;
 }
 
 export interface Allowance {
@@ -150,8 +184,20 @@ export const api = {
 
   getMenu: (accessToken: string) => request<MenuItem[]>("/menu", { accessToken }),
 
-  createOrder: (accessToken: string, items: { menuItemId: string; quantity: number }[]) =>
-    request<Order>("/orders", { method: "POST", body: { items }, accessToken }),
+  createOrder: (
+    accessToken: string,
+    items: { menuItemId: string; quantity: number }[],
+    options: { subscriptionMeals?: number; redeemPoints?: boolean } = {},
+  ) => request<Order>("/orders", { method: "POST", body: { items, ...options }, accessToken }),
+
+  getLoyalty: (accessToken: string) => request<LoyaltySummary>("/loyalty/me", { accessToken }),
+  getPlans: (accessToken: string) => request<Plan[]>("/subscriptions/plans", { accessToken }),
+  getMySubscription: (accessToken: string) =>
+    request<{ subscription: MySubscription | null }>("/subscriptions/me", { accessToken }),
+  requestPlan: (accessToken: string, planId: string) =>
+    request<MySubscription>("/subscriptions", { method: "POST", body: { planId }, accessToken }),
+  cancelPendingPlan: (accessToken: string) =>
+    request<{ subscription: MySubscription | null }>("/subscriptions/me/cancel", { method: "POST", accessToken }),
 
   getOrders: (accessToken: string) => request<Order[]>("/orders", { accessToken }),
 

@@ -26,6 +26,8 @@ export default function CustomersPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pointsDelta, setPointsDelta] = useState("");
+  const [pointsNote, setPointsNote] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -63,6 +65,27 @@ export default function CustomersPage() {
       await load();
     } catch (e) {
       setError(describeError(e, { 400: "Δεν μπορείς να αφαιρέσεις τον δικό σου ρόλο διαχειριστή.", 409: "Πρέπει να μείνει τουλάχιστον ένας διαχειριστής." }));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function adjustPoints(event: FormEvent) {
+    event.preventDefault();
+    if (!open) return;
+    const points = Number(pointsDelta);
+    if (!Number.isInteger(points) || points === 0) return setError("Γράψε ακέραιο αριθμό πόντων (π.χ. 50 ή -50).");
+    if (pointsNote.trim().length < 2) return setError("Γράψε έναν σύντομο λόγο για τη διόρθωση.");
+    setBusy(true);
+    setError(null);
+    try {
+      await withAuth((t) => api.adjustPoints(t, open.id, points, pointsNote.trim()));
+      setOpen(await withAuth((t) => api.customer(t, open.id)));
+      setPointsDelta("");
+      setPointsNote("");
+      setNotice(`Οι πόντοι του ${open.email} διορθώθηκαν κατά ${points > 0 ? "+" : ""}${points}.`);
+    } catch (e) {
+      setError(describeError(e));
     } finally {
       setBusy(false);
     }
@@ -110,6 +133,12 @@ export default function CustomersPage() {
             <button className="btn btn-primary" disabled={busy || role === open.role} onClick={saveRole}>{busy ? "Αποθήκευση…" : "Αλλαγή ρόλου"}</button>
             <button className="btn btn-secondary" onClick={() => { setOpen(null); setNotice(null); }}>Κλείσιμο</button>
           </div>
+          <p className="legend" style={{ marginTop: 20 }}>Πόντοι επιβράβευσης: {open.loyaltyPoints}</p>
+          <form className="search-row" onSubmit={adjustPoints}>
+            <input aria-label="Πόντοι (+ ή -)" inputMode="numeric" placeholder="± πόντοι" value={pointsDelta} onChange={(e) => setPointsDelta(e.target.value)} style={{ maxWidth: 110 }} />
+            <input aria-label="Λόγος διόρθωσης" placeholder="Λόγος (π.χ. αποζημίωση)" value={pointsNote} onChange={(e) => setPointsNote(e.target.value)} />
+            <button className="btn btn-secondary" disabled={busy}>Διόρθωση</button>
+          </form>
           <p className="legend" style={{ marginTop: 20 }}>Πρόσφατες παραγγελίες</p>
           {open.recentOrders.length === 0 ? <p className="muted">Καμία παραγγελία ακόμα.</p> : (
             <ul className="rows">

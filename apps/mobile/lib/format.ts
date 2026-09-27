@@ -1,6 +1,7 @@
 /** 850 -> "8,50 €" (Greek convention: decimal comma, symbol after the amount). */
 export function formatPrice(cents: number): string {
-  return `${(cents / 100).toFixed(2).replace(".", ",")} €`;
+  // Non-breaking space: the amount and "€" never wrap onto separate lines.
+  return `${(cents / 100).toFixed(2).replace(".", ",")}\u00A0€`;
 }
 
 /** 42 -> "42", 38.5 -> "38,5" */

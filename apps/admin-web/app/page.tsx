@@ -15,6 +15,14 @@ const COLUMNS: { status: OrderStatus; title: string }[] = [
 const LATE_AFTER_MIN: Partial<Record<OrderStatus, number>> = { pending: 5, confirmed: 25, ready: 30 };
 const POLL_MS = 15_000;
 
+/** What the cashier collects at pickup, after meal plan, employer and loyalty discounts. */
+const toCollect = (o: AdminOrder) =>
+  o.totalPriceCents - (o.companyPaidCents ?? 0) - (o.subscriptionCoveredCents ?? 0) - (o.loyaltyDiscountCents ?? 0);
+const discountNote = (o: AdminOrder) =>
+  [o.subscriptionCoveredCents ? "συνδρομή" : null, o.companyPaidCents ? "εταιρεία" : null, o.loyaltyDiscountCents ? "πόντοι" : null]
+    .filter(Boolean)
+    .join(", ");
+
 export default function KitchenBoard() {
   const { withAuth } = useSession();
   const [orders, setOrders] = useState<AdminOrder[] | null>(null);
@@ -110,7 +118,12 @@ export default function KitchenBoard() {
                         ))}
                       </ul>
                       <div className="ticket-meta">
-                        <span>{formatPrice(order.totalPriceCents)} · {order.customerEmail}</span>
+                        <span>
+                          {formatPrice(order.totalPriceCents)} · {order.customerEmail}
+                          {!order.paidOnline && toCollect(order) !== order.totalPriceCents ? (
+                            <><br /><strong>Είσπραξη: {formatPrice(toCollect(order))}</strong> <span className="muted">({discountNote(order)})</span></>
+                          ) : null}
+                        </span>
                         <span className={`badge${order.paidOnline ? " paid" : ""}`}>
                           {order.paidOnline ? "Πληρώθηκε online" : "Πληρωμή στο κατάστημα"}
                         </span>

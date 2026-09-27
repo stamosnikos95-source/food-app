@@ -14,6 +14,7 @@ import { TodayScreen } from "./screens/TodayScreen";
 import { AssistantScreen } from "./screens/AssistantScreen";
 import { OrdersScreen } from "./screens/OrdersScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
+import { PerksScreen } from "./screens/PerksScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -21,6 +22,7 @@ const TAB_ICONS: Record<string, IconName> = {
   Σήμερα: "bowl",
   Βοηθός: "assistant",
   Παραγγελίες: "bag",
+  Προνόμια: "gift",
   Προφίλ: "user",
 };
 
@@ -63,6 +65,7 @@ function MainTabs() {
           },
         }}
       />
+      <Tab.Screen name="Προνόμια" component={PerksScreen} />
       <Tab.Screen name="Προφίλ" component={ProfileScreen} />
     </Tab.Navigator>
   );

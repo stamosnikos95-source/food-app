@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../auth/AuthContext";
 import { useCart } from "../cart/CartContext";
-import { Allowance, api, Order } from "../api/client";
+import { Allowance, api, LoyaltySummary, MySubscription, Order } from "../api/client";
 import { describeError } from "../api/errors";
 import { Screen } from "../components/Screen";
 import { PrimaryButton } from "../components/PrimaryButton";
@@ -29,11 +29,53 @@ type HistoryState =
   | { status: "error"; message: string }
   | { status: "ready"; orders: Order[] };
 
+function DiscountLine({ label, cents }: { label: string; cents: number }) {
+  return (
+    <View style={styles.subsidyLine}>
+      <Text style={styles.subsidyLabel}>{label}</Text>
+      <Text style={styles.subsidyValue}>−{formatPrice(cents)}</Text>
+    </View>
+  );
+}
+
+function Toggle({ label, on, disabled, onPress }: { label: string; on: boolean; disabled?: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: on, disabled }}
+      style={[styles.toggleRow, disabled && { opacity: 0.5 }]}
+    >
+      <Text style={styles.toggleLabel}>{label}</Text>
+      <View style={[styles.toggle, on && styles.toggleOn]}>
+        <View style={[styles.knob, on && styles.knobOn]} />
+      </View>
+    </Pressable>
+  );
+}
+
+/** "Συνδρομή −8,50 € · Πόντοι −5,00 € · πλήρωσες 3,50 €" for past orders. */
+function discountSummary(o: Order): string | null {
+  const parts = [
+    o.subscriptionCoveredCents > 0 ? `Συνδρομή −${formatPrice(o.subscriptionCoveredCents)}` : null,
+    o.companyPaidCents > 0 ? `Εταιρεία −${formatPrice(o.companyPaidCents)}` : null,
+    o.loyaltyDiscountCents > 0 ? `Πόντοι −${formatPrice(o.loyaltyDiscountCents)}` : null,
+  ].filter(Boolean);
+  if (parts.length === 0) return null;
+  const paid = o.totalPriceCents - o.companyPaidCents - o.subscriptionCoveredCents - o.loyaltyDiscountCents;
+  return `${parts.join(" · ")} · πλήρωσες ${formatPrice(paid)}`;
+}
+
 export function OrdersScreen() {
   const { withAuth } = useAuth();
   const cart = useCart();
   const [history, setHistory] = useState<HistoryState>({ status: "loading" });
   const [allowance, setAllowance] = useState<Allowance | null>(null);
+  const [loyalty, setLoyalty] = useState<LoyaltySummary | null>(null);
+  const [plan, setPlan] = useState<MySubscription | null>(null);
+  const [usePlan, setUsePlan] = useState(true);
+  const [redeem, setRedeem] = useState(false);
   const [placing, setPlacing] = useState<"card" | "store" | null>(null);
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -44,6 +86,10 @@ export function OrdersScreen() {
     withAuth((token) => api.getMyAllowance(token))
       .then((r) => setAllowance(r.allowance))
       .catch(() => setAllowance(null));
+    withAuth((token) => api.getLoyalty(token)).then(setLoyalty).catch(() => setLoyalty(null));
+    withAuth((token) => api.getMySubscription(token))
+      .then((r) => setPlan(r.subscription))
+      .catch(() => setPlan(null));
     withAuth((token) => api.getOrders(token))
       .then((orders) => setHistory({ status: "ready", orders }))
       .catch((error) => setHistory({ status: "error", message: describeError(error) }));
@@ -114,7 +160,7 @@ export function OrdersScreen() {
     let orderId: string | null = null;
     try {
       const items = cart.lines.map((l) => ({ menuItemId: l.item.id, quantity: l.quantity }));
-      orderId = (await withAuth((token) => api.createOrder(token, items))).id;
+      orderId = (await withAuth((token) => api.createOrder(token, items, orderOptions))).id;
       // The order now exists (awaiting payment), so the cart has done its job;
       // if payment can't start, it can be retried from the history below.
       cart.clear();
@@ -138,7 +184,7 @@ export function OrdersScreen() {
     setPlacing("store");
     try {
       const items = cart.lines.map((l) => ({ menuItemId: l.item.id, quantity: l.quantity }));
-      await withAuth((token) => api.createOrder(token, items));
+      await withAuth((token) => api.createOrder(token, items, orderOptions));
       cart.clear();
       setBanner({
         tone: "success",
@@ -168,9 +214,18 @@ export function OrdersScreen() {
     }
   }
 
-  // Preview only: the server re-computes the subsidy when the order is placed.
-  const subsidy = allowance ? Math.min(allowance.remainingTodayCents, cart.totalCents) : 0;
-  const amountDue = cart.totalCents - subsidy;
+  // Preview only — the server re-prices everything, in the same order:
+  // meal plan (most expensive portions first), employer subsidy, loyalty.
+  const portions = cart.lines.flatMap((l) => Array<number>(l.quantity).fill(l.item.priceCents)).sort((a, b) => b - a);
+  const planMeals = plan?.usable && usePlan ? Math.min(plan.mealsRemaining, portions.length) : 0;
+  const planCents = portions.slice(0, planMeals).reduce((sum, p) => sum + Math.min(p, plan?.plan.maxMealPriceCents ?? 0), 0);
+  const afterPlan = cart.totalCents - planCents;
+  const subsidy = allowance ? Math.min(allowance.remainingTodayCents, afterPlan) : 0;
+  const afterSubsidy = afterPlan - subsidy;
+  const canRedeem = Boolean(loyalty?.canRedeem) && afterSubsidy > 0;
+  const loyaltyCents = redeem && canRedeem && loyalty ? Math.min(loyalty.rewardValueCents, afterSubsidy) : 0;
+  const amountDue = afterSubsidy - loyaltyCents;
+  const orderOptions = { subscriptionMeals: planMeals || undefined, redeemPoints: loyaltyCents > 0 || undefined };
 
   return (
     <Screen>
@@ -202,17 +257,31 @@ export function OrdersScreen() {
               <Text style={styles.totalLabel}>Σύνολο</Text>
               <Text style={styles.totalValue}>{formatPrice(cart.totalCents)}</Text>
             </View>
-            {subsidy > 0 && allowance ? (
-              <>
-                <View style={styles.subsidyLine}>
-                  <Text style={styles.subsidyLabel}>Επιδότηση {allowance.companyName}</Text>
-                  <Text style={styles.subsidyValue}>−{formatPrice(subsidy)}</Text>
-                </View>
-                <View style={styles.subsidyLine}>
-                  <Text style={styles.totalLabel}>Πληρώνεις</Text>
-                  <Text style={styles.totalLabel}>{formatPrice(amountDue)}</Text>
-                </View>
-              </>
+            {plan?.usable && plan.mealsRemaining > 0 ? (
+              <Toggle
+                label={`Χρήση συνδρομής · ${plan.mealsRemaining === 1 ? "απομένει 1 γεύμα" : `απομένουν ${plan.mealsRemaining} γεύματα`}`}
+                on={usePlan}
+                onPress={() => setUsePlan((v) => !v)}
+              />
+            ) : null}
+            {loyalty?.canRedeem ? (
+              <Toggle
+                label={`Εξαργύρωση ${loyalty.rewardPoints} πόντων (−${formatPrice(loyalty.rewardValueCents)})`}
+                on={redeem && canRedeem}
+                disabled={!canRedeem}
+                onPress={() => setRedeem((v) => !v)}
+              />
+            ) : null}
+            {planCents > 0 ? (
+              <DiscountLine label={`Συνδρομή · ${planMeals} ${planMeals === 1 ? "γεύμα" : "γεύματα"}`} cents={planCents} />
+            ) : null}
+            {subsidy > 0 && allowance ? <DiscountLine label={`Επιδότηση ${allowance.companyName}`} cents={subsidy} /> : null}
+            {loyaltyCents > 0 && loyalty ? <DiscountLine label={`Πόντοι (${loyalty.rewardPoints})`} cents={loyaltyCents} /> : null}
+            {amountDue !== cart.totalCents ? (
+              <View style={styles.subsidyLine}>
+                <Text style={styles.totalLabel}>Πληρώνεις</Text>
+                <Text style={styles.totalLabel}>{formatPrice(amountDue)}</Text>
+              </View>
             ) : null}
             <Text style={styles.pickupNote}>
               {paymentsEnabled
@@ -283,9 +352,7 @@ export function OrdersScreen() {
                 </Text>
                 <View style={styles.orderFooter}>
                   <Text style={styles.orderTotal}>{formatPrice(order.totalPriceCents)}</Text>
-                  {order.companyPaidCents > 0 ? (
-                    <Text style={styles.companyPaid}>Εταιρεία: −{formatPrice(order.companyPaidCents)} · πλήρωσες {formatPrice(order.totalPriceCents - order.companyPaidCents)}</Text>
-                  ) : null}
+                  {discountSummary(order) ? <Text style={styles.companyPaid}>{discountSummary(order)}</Text> : null}
                   {order.status === "pending" && paymentsEnabled ? (
                     <Pressable
                       onPress={() => payExistingOrder(order.id)}
@@ -314,6 +381,12 @@ export function OrdersScreen() {
 const MIN_CARD_CHARGE_CENTS = 50; // the card processor's minimum charge
 
 const styles = StyleSheet.create({
+  toggleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, paddingVertical: 10 },
+  toggleLabel: { flex: 1, fontFamily: theme.typography.fontBody, fontSize: theme.typography.scale.sm, color: theme.color.textPrimary },
+  toggle: { width: 44, height: 26, borderRadius: 13, backgroundColor: theme.color.border, padding: 3 },
+  toggleOn: { backgroundColor: theme.color.accent },
+  knob: { width: 20, height: 20, borderRadius: 10, backgroundColor: theme.color.surface },
+  knobOn: { transform: [{ translateX: 18 }] },
   secondaryAction: { marginTop: theme.space.sm },
   subsidyLine: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginTop: theme.space.xs },
   subsidyLabel: { fontFamily: theme.typography.fontBody, fontSize: theme.typography.scale.sm, color: theme.color.accentStrong },

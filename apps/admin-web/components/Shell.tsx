@@ -16,6 +16,7 @@ const NAV = [
   { href: "/recipes/", label: "Συνταγές", adminOnly: true },
   { href: "/customers/", label: "Πελάτες", adminOnly: true },
   { href: "/companies/", label: "Εταιρείες", adminOnly: true },
+  { href: "/subscriptions/", label: "Συνδρομές", adminOnly: true },
 ];
 
 function LoginScreen() {
