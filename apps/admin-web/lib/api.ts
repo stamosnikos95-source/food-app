@@ -40,6 +40,7 @@ export interface AdminMenuItem {
   fatG: number;
   allergens: string[];
   dietTags: string[];
+  imageUrl?: string | null;
   isActive: boolean;
 }
 

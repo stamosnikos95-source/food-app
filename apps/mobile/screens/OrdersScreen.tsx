@@ -5,6 +5,7 @@ import { useAuth } from "../auth/AuthContext";
 import { useCart } from "../cart/CartContext";
 import { Allowance, api, ApiError, LoyaltySummary, MySubscription, Order } from "../api/client";
 import { useGym } from "../gym/GymContext";
+import { useNavigation } from "@react-navigation/native";
 import { describeError } from "../api/errors";
 import { Screen } from "../components/Screen";
 import { PrimaryButton } from "../components/PrimaryButton";
@@ -79,6 +80,7 @@ export function OrdersScreen() {
   const [usePlan, setUsePlan] = useState(true);
   const [redeem, setRedeem] = useState(false);
   const { gym, clear: clearGym } = useGym();
+  const tabs = useNavigation();
   const [deliverToGym, setDeliverToGym] = useState(false);
   const [placing, setPlacing] = useState<"card" | "store" | null>(null);
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
@@ -252,7 +254,7 @@ export function OrdersScreen() {
     <Screen>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title} accessibilityRole="header">
-          Παραγγελίες
+          Καλάθι
         </Text>
 
         {banner ? (
@@ -262,6 +264,13 @@ export function OrdersScreen() {
           </View>
         ) : null}
 
+        {cart.lines.length === 0 ? (
+          <View style={styles.emptyCart}>
+            <Text style={styles.emptyTitle}>Το καλάθι σου είναι άδειο</Text>
+            <Text style={styles.emptyText}>Διάλεξε κάτι από το μενού της ημέρας.</Text>
+            <PrimaryButton title="Δες το μενού" variant="secondary" onPress={() => tabs.navigate("Σήμερα" as never)} />
+          </View>
+        ) : null}
         {cart.lines.length > 0 ? (
           <View style={styles.cartCard}>
             <Text style={styles.sectionLabel}>{upperGreek("Το καλάθι σου")}</Text>
@@ -352,7 +361,7 @@ export function OrdersScreen() {
           </View>
         ) : null}
 
-        <Text style={[styles.sectionLabel, styles.historyLabel]}>{upperGreek("Ιστορικό")}</Text>
+        <Text style={[styles.sectionLabel, styles.historyLabel]}>{upperGreek("Οι παραγγελίες μου")}</Text>
 
         {history.status === "loading" ? (
           <ActivityIndicator color={theme.color.accent} style={styles.spinner} />
@@ -412,6 +421,9 @@ export function OrdersScreen() {
 const MIN_CARD_CHARGE_CENTS = 50; // the card processor's minimum charge
 
 const styles = StyleSheet.create({
+  emptyCart: { gap: 8, padding: theme.space.lg, borderRadius: theme.radius.lg, backgroundColor: theme.color.surfaceRaised, marginBottom: theme.space.lg },
+  emptyTitle: { fontFamily: theme.typography.fontBodySemiBold, fontSize: 17, color: theme.color.textPrimary },
+  emptyText: { fontFamily: theme.typography.fontBody, fontSize: 14, color: theme.color.textSecondary, marginBottom: 8 },
   toggleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, paddingVertical: 10 },
   toggleLabel: { flex: 1, fontFamily: theme.typography.fontBody, fontSize: theme.typography.scale.sm, color: theme.color.textPrimary },
   toggle: { width: 44, height: 26, borderRadius: 13, backgroundColor: theme.color.border, padding: 3 },

@@ -3,6 +3,7 @@
 export const SAMPLE_MENU_ITEMS = [
   {
     id: "seed-bowl-kotopoulo-kinoa",
+    imageUrl: "https://images.unsplash.com/photo-1520066391310-428f06ebd602?auto=format&fit=crop&w=900&q=70",
     allergens: ["milk"],
     name: "Bowl κοτόπουλο & κινόα",
     description: "Ψητό κοτόπουλο, κινόα, αβοκάντο, ντοματίνια, σάλτσα γιαουρτιού",
@@ -15,6 +16,7 @@ export const SAMPLE_MENU_ITEMS = [
   },
   {
     id: "seed-solomos-glykopatata",
+    imageUrl: "https://images.unsplash.com/photo-1601316585772-ba1e6dae9cfc?auto=format&fit=crop&w=900&q=70",
     allergens: ["fish"],
     name: "Σολομός με γλυκοπατάτα",
     description: "Ψητός σολομός, πουρές γλυκοπατάτας, μπρόκολο στον ατμό",
@@ -27,6 +29,7 @@ export const SAMPLE_MENU_ITEMS = [
   },
   {
     id: "seed-vegan-fakes",
+    imageUrl: "https://images.unsplash.com/photo-1763000215238-38350d3e41ac?auto=format&fit=crop&w=900&q=70",
     dietTags: ["vegan", "vegetarian"],
     allergens: ["sesame"],
     name: "Vegan bowl με φακές",
@@ -40,6 +43,7 @@ export const SAMPLE_MENU_ITEMS = [
   },
   {
     id: "seed-salad-elliniki-kotopoulo",
+    imageUrl: "https://images.unsplash.com/photo-1631311695255-8dde6bf96cb5?auto=format&fit=crop&w=900&q=70",
     allergens: ["milk"],
     name: "Ελληνική σαλάτα με κοτόπουλο",
     description: "Ντομάτα, αγγούρι, φέτα, ελιές Καλαμών, ψητό κοτόπουλο, παρθένο ελαιόλαδο",
@@ -52,6 +56,7 @@ export const SAMPLE_MENU_ITEMS = [
   },
   {
     id: "seed-wrap-galopoula",
+    imageUrl: "https://images.unsplash.com/photo-1646530208887-8a791bff4701?auto=format&fit=crop&w=900&q=70",
     allergens: ["gluten"],
     name: "Wrap γαλοπούλας με λαχανικά",
     description: "Τορτίγια ολικής άλεσης, γαλοπούλα, λαχανικά, αβοκάντο",
@@ -64,6 +69,7 @@ export const SAMPLE_MENU_ITEMS = [
   },
   {
     id: "seed-buddha-bowl",
+    imageUrl: "https://images.unsplash.com/photo-1623428188474-b1d532c5e560?auto=format&fit=crop&w=900&q=70",
     dietTags: ["vegan", "vegetarian"],
     allergens: ["sesame"],
     name: "Buddha bowl λαχανικών",

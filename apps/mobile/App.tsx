@@ -16,6 +16,7 @@ import { OrdersScreen } from "./screens/OrdersScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
 import { PerksScreen } from "./screens/PerksScreen";
 import { GymProvider } from "./gym/GymContext";
+import { DishSheetProvider } from "./dish/DishSheet";
 
 const Tab = createBottomTabNavigator();
 
@@ -41,7 +42,7 @@ function MainTabs() {
       initialRouteName={peekCheckoutReturn() ? "Παραγγελίες" : "Σήμερα"}
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: theme.color.accentStrong,
+        tabBarActiveTintColor: theme.color.accent,
         tabBarInactiveTintColor: theme.color.textMuted,
         tabBarLabelStyle: { fontFamily: theme.typography.fontBodyMedium, fontSize: 11 },
         tabBarStyle: {
@@ -51,12 +52,13 @@ function MainTabs() {
         tabBarIcon: ({ color }) => <Icon name={TAB_ICONS[route.name]} color={color} size={24} />,
       })}
     >
-      <Tab.Screen name="Σήμερα" component={TodayScreen} />
-      <Tab.Screen name="Βοηθός" component={AssistantScreen} />
+      <Tab.Screen name="Σήμερα" component={TodayScreen} options={{ tabBarLabel: "Μενού" }} />
+      <Tab.Screen name="Βοηθός" component={AssistantScreen} options={{ tabBarLabel: "Για σένα" }} />
       <Tab.Screen
         name="Παραγγελίες"
         component={OrdersScreen}
         options={{
+          tabBarLabel: "Καλάθι",
           tabBarBadge: cart.totalCount > 0 ? cart.totalCount : undefined,
           tabBarBadgeStyle: {
             backgroundColor: theme.color.accent,
@@ -96,7 +98,9 @@ function RootNavigator() {
     <NavigationContainer theme={navigationTheme}>
       {isSignedIn ? (
         <CartProvider>
+          <DishSheetProvider>
           <MainTabs />
+          </DishSheetProvider>
         </CartProvider>
       ) : (
         <AuthGateScreen />

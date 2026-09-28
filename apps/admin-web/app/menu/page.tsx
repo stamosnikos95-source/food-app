@@ -9,18 +9,19 @@ import { useSession } from "../../lib/session";
 type Draft = Record<"name" | "description" | "category" | "price" | "portion" | "calories" | "protein" | "carbs" | "fat", string> & {
   allergens: string[];
   dietTags: string[];
+  imageUrl: string;
   isActive: boolean;
 };
 
 const EMPTY: Draft = { name: "", description: "", category: "", price: "", portion: "", calories: "",
-  protein: "", carbs: "", fat: "", allergens: [], dietTags: [], isActive: true };
+  protein: "", carbs: "", fat: "", allergens: [], dietTags: [], imageUrl: "", isActive: true };
 
 const toDraft = (i: AdminMenuItem): Draft => ({
   name: i.name, description: i.description ?? "", category: i.category ?? "",
   price: (i.priceCents / 100).toFixed(2).replace(".", ","), portion: String(i.portionWeightG),
   calories: String(i.calories), protein: String(i.proteinG).replace(".", ","),
   carbs: String(i.carbsG).replace(".", ","), fat: String(i.fatG).replace(".", ","),
-  allergens: i.allergens, dietTags: i.dietTags ?? [], isActive: i.isActive,
+  allergens: i.allergens, dietTags: i.dietTags ?? [], imageUrl: i.imageUrl ?? "", isActive: i.isActive,
 });
 
 function fromDraft(d: Draft): MenuItemInput | string {
@@ -44,6 +45,7 @@ function fromDraft(d: Draft): MenuItemInput | string {
     fatG: Math.round(numbers.fatG! * 10) / 10,
     allergens: d.allergens,
     dietTags: d.dietTags,
+    imageUrl: d.imageUrl.trim() || null,
     isActive: d.isActive,
   };
 }
@@ -155,6 +157,15 @@ export default function MenuPage() {
               ))}
             </div>
           </fieldset>
+          <div className="field wide" style={{ marginTop: 16 }}>
+            <label htmlFor="photo">Φωτογραφία (σύνδεσμος https)</label>
+            <input id="photo" value={editing.draft.imageUrl} placeholder="https://…"
+              onChange={(e) => setEditing({ ...editing, draft: { ...editing.draft, imageUrl: e.target.value } })} />
+            {editing.draft.imageUrl.startsWith("https://") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={editing.draft.imageUrl} alt="" style={{ marginTop: 8, width: 160, height: 110, objectFit: "cover", borderRadius: 12 }} />
+            ) : null}
+          </div>
           <fieldset style={{ border: 0, padding: 0, marginTop: 16 }}>
             <legend className="legend">Διατροφή (οι προτάσεις βασίζονται μόνο σε αυτή τη σήμανση)</legend>
             <div className="checks">

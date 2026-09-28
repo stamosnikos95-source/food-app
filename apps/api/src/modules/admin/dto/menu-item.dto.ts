@@ -11,8 +11,7 @@ import {
   Length,
   Max,
   MaxLength,
-  Min,
-} from "class-validator";
+  Min,, IsUrl } from "class-validator";
 import { ALLERGEN_CODES, DIET_TAG_CODES } from "@food-app/shared-types";
 
 export class CreateMenuItemDto {
@@ -70,6 +69,12 @@ export class CreateMenuItemDto {
   @ArrayUnique()
   @IsIn(DIET_TAG_CODES as string[], { each: true })
   dietTags?: string[];
+
+  /** Photo shown to customers (https link). */
+  @IsOptional()
+  @IsUrl({ protocols: ["https"], require_protocol: true })
+  @MaxLength(500)
+  imageUrl?: string | null;
 
   @IsOptional()
   @IsBoolean()

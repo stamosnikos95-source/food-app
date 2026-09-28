@@ -2,42 +2,38 @@
  * Shared design tokens for the food app.
  * Consumed by apps/admin-web (Tailwind theme) and apps/mobile (theme object).
  *
- * Direction: premium, minimal food brand. Warm neutral base, one grounded
- * accent (moss/olive), editorial serif for titles and dish names, a warm
- * Greek-native sans for everything else. No gradients, no "AI" chrome.
+ * Direction: premium, minimal food-ordering app. White base, crisp near-black
+ * text, one vivid emerald accent, photography first. Greek-native sans
+ * (Commissioner) throughout.
  */
 
 export const color = {
-  // Warm, slightly stone-toned neutral base (not pure white, not #F4F1EA cream)
-  background: "#F2F0E6",
-  surface: "#FBFAF6",
-  surfaceRaised: "#FFFFFF",
+  background: "#FFFFFF",
+  surface: "#FFFFFF",
+  surfaceRaised: "#F5F7F5", // quiet grey-green for grouped sections
 
-  // Text
-  textPrimary: "#20241E", // near-black with a green cast, not generic #111
-  textSecondary: "#5B6157",
-  textMuted: "#8B8F82",
+  textPrimary: "#101512",
+  textSecondary: "#4B544E",
+  textMuted: "#8A928C",
 
-  // Accent: deep moss / olive, used sparingly
-  accent: "#465C3E",
-  accentStrong: "#2E3E29",
-  accentSoft: "#DDE5D3",
+  accent: "#0E8A4F", // vivid emerald: actions, prices in focus
+  accentStrong: "#0A6B3D",
+  accentSoft: "#E7F5ED",
 
-  // A single secondary accent for highlights (e.g. "today's pick")
-  highlight: "#B4823B",
+  highlight: "#C77D1A", // allergens & warnings, warm amber
 
-  border: "#DEDACB",
-  borderStrong: "#C4BFA9",
+  border: "#E8ECE9",
+  borderStrong: "#D3D9D5",
 
-  danger: "#A23B2E",
-  success: "#3F6B45",
+  danger: "#D23B2C",
+  success: "#0E8A4F",
 } as const;
 
 export const typography = {
   // One family name per weight: custom fonts on iOS/Android don't reliably
   // synthesize weights from `fontWeight`, so never combine these with it.
   // Both families ship full Greek (see apps/mobile/assets/fonts/README.md).
-  fontDisplay: "Piazzolla_600SemiBold",
+  fontDisplay: "Commissioner_600SemiBold", // modern app titles (Piazzolla stays loaded for the wordmark)
   fontBody: "Commissioner_400Regular",
   fontBodyMedium: "Commissioner_500Medium",
   fontBodySemiBold: "Commissioner_600SemiBold",
@@ -66,9 +62,10 @@ export const space = {
 } as const;
 
 export const radius = {
-  sm: 4,
-  md: 8,
-  lg: 16,
+  sm: 6,
+  md: 12,
+  lg: 18,
+  xl: 24,
   pill: 999,
 } as const;
 
