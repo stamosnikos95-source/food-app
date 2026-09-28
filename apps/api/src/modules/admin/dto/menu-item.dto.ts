@@ -11,7 +11,9 @@ import {
   Length,
   Max,
   MaxLength,
-  Min,, IsUrl } from "class-validator";
+  Min,
+  IsUrl,
+} from "class-validator";
 import { ALLERGEN_CODES, DIET_TAG_CODES } from "@food-app/shared-types";
 
 export class CreateMenuItemDto {
