@@ -197,3 +197,6 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .hbar .track { height: 10px; background: #ECEAE0; border-radius: 5px; overflow: hidden; }
 .hbar .fill { height: 10px; background: #465C3E; }
 .rows li .flag { align-self: center; flex-shrink: 0; } /* chips keep their size next to long text */
+
+/* Designed light-only: stop browsers auto-darkening it (Chrome/Brave force dark). */
+:root { color-scheme: only light; }

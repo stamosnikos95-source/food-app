@@ -1,4 +1,4 @@
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
 import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -109,6 +109,19 @@ function RootNavigator() {
   );
 }
 
+// Web: the design is light-only. Opt out of browsers' automatic dark mode
+// (Chrome/Brave "force dark"), which recolours it unpredictably, and paint
+// the page around the centred app column.
+const WEB_PAGE_BACKGROUND = "#EEF1EE";
+if (Platform.OS === "web" && typeof document !== "undefined") {
+  const meta =
+    document.querySelector('meta[name="color-scheme"]') ??
+    document.head.appendChild(Object.assign(document.createElement("meta"), { name: "color-scheme" }));
+  meta.setAttribute("content", "only light");
+  document.documentElement.style.colorScheme = "only light";
+  document.body.style.backgroundColor = WEB_PAGE_BACKGROUND;
+}
+
 export default function App() {
   const [fontsLoaded, fontError] = useFonts({
     // Vendored + subset to Latin/Greek; see assets/fonts/README.md.
@@ -124,12 +137,33 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <GymProvider>
-        <StatusBar style="dark" />
-        <RootNavigator />
-        </GymProvider>
-      </AuthProvider>
+      <View style={styles.frame}>
+        <AuthProvider>
+          <GymProvider>
+            <StatusBar style="dark" />
+            <RootNavigator />
+          </GymProvider>
+        </AuthProvider>
+      </View>
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  // Phones: full screen. Wide screens (desktop web): a centred, phone-width
+  // column, so photos, cards and buttons keep their designed proportions.
+  frame: Platform.select({
+    web: {
+      flex: 1,
+      width: "100%",
+      maxWidth: 560,
+      alignSelf: "center",
+      backgroundColor: theme.color.background,
+      shadowColor: "#000",
+      shadowOpacity: 0.08,
+      shadowRadius: 24,
+      shadowOffset: { width: 0, height: 0 },
+    },
+    default: { flex: 1 },
+  }),
+});

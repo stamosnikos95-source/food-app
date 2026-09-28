@@ -40,6 +40,8 @@ function DishSheet({ item, onClose }: { item: MenuItem | null; onClose: () => vo
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Κλείσιμο" />
+      {/* Centred, app-width sheet: on desktop it lines up with the app column */}
+      <View style={styles.sheetArea} pointerEvents="box-none">
       <View style={styles.sheet}>
         <ScrollView bounces={false} contentContainerStyle={styles.scroll}>
           <View>
@@ -84,18 +86,20 @@ function DishSheet({ item, onClose }: { item: MenuItem | null; onClose: () => vo
           </View>
         </View>
       </View>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(10,20,14,0.45)" },
+  sheetArea: { ...StyleSheet.absoluteFillObject, justifyContent: "flex-end", alignItems: "center" },
   sheet: {
-    position: "absolute", left: 0, right: 0, bottom: 0, maxHeight: "92%",
+    width: "100%", maxWidth: 560, maxHeight: "92%",
     backgroundColor: theme.color.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: "hidden",
   },
   scroll: { paddingBottom: 8 },
-  hero: { width: "100%", height: 280 },
+  hero: { width: "100%", aspectRatio: 16 / 10 }, // whole dish visible at any width
   close: {
     position: "absolute", top: 14, right: 14, width: 36, height: 36, borderRadius: 18,
     backgroundColor: "rgba(255,255,255,0.92)", alignItems: "center", justifyContent: "center",
