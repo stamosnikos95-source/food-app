@@ -31,6 +31,36 @@ type HistoryState =
   | { status: "error"; message: string }
   | { status: "ready"; orders: Order[] };
 
+/**
+ * Why the server refused an order, in words the customer can act on — plus
+ * which part of the cart state caused it, so it can be switched off.
+ */
+function explainOrderError(
+  error: unknown,
+  statusMessages: Record<number, string> = {},
+): { message: string; fix?: "gym" | "gymDelivery" | "points" | "plan" } {
+  const text = error instanceof ApiError ? String(error.message) : "";
+  if (/doesn't take deliveries/i.test(text)) {
+    return { message: "Το γυμναστήριο δεν δέχεται πια παραδόσεις. Επίλεξε παραλαβή από το κατάστημα και δοκίμασε ξανά.", fix: "gymDelivery" };
+  }
+  if (/gym/i.test(text)) {
+    return { message: "Ο κωδικός του γυμναστηρίου δεν ισχύει πια — η παραγγελία μπορεί να γίνει κανονικά, χωρίς την έκπτωση.", fix: "gym" };
+  }
+  if (/points|nothing left to pay/i.test(text)) {
+    return { message: "Η εξαργύρωση πόντων δεν ισχύει πια για αυτή την παραγγελία και απενεργοποιήθηκε. Δοκίμασε ξανά.", fix: "points" };
+  }
+  if (/meal plan|meals left/i.test(text)) {
+    return { message: "Η συνδρομή σου δεν καλύπτει πια αυτά τα γεύματα (έληξε ή χρησιμοποιήθηκαν) και απενεργοποιήθηκε. Δοκίμασε ξανά.", fix: "plan" };
+  }
+  if (/quantity/i.test(text)) return { message: "Μπορείς να παραγγείλεις έως 50 μερίδες από κάθε πιάτο." };
+  return {
+    message: describeError(error, {
+      400: "Κάποιο πιάτο δεν είναι πια διαθέσιμο. Αφαίρεσέ το και δοκίμασε ξανά.",
+      ...statusMessages,
+    }),
+  };
+}
+
 function DiscountLine({ label, cents }: { label: string; cents: number }) {
   return (
     <View style={styles.subsidyLine}>
@@ -159,6 +189,16 @@ export function OrdersScreen() {
     409: "Αυτή η παραγγελία έχει ήδη πληρωθεί.",
   };
 
+  function handleOrderError(error: unknown) {
+    const { message, fix } = explainOrderError(error, paymentErrors);
+    if (fix === "gym") clearGym();
+    if (fix === "gymDelivery") setDeliverToGym(false);
+    if (fix === "points") setRedeem(false);
+    if (fix === "plan") setUsePlan(false);
+    if (fix === "points" || fix === "plan") loadOrders(); // refreshes points and plan too
+    setCheckoutError(message);
+  }
+
   async function placeOrderAndPay() {
     if (cart.lines.length === 0) return;
     setCheckoutError(null);
@@ -172,17 +212,7 @@ export function OrdersScreen() {
       cart.clear();
       await goToPayment(orderId);
     } catch (error) {
-      if (error instanceof ApiError && /gym/i.test(error.message)) {
-        clearGym();
-        setCheckoutError("Ο κωδικός του γυμναστηρίου δεν ισχύει πια — η παραγγελία μπορεί να γίνει κανονικά, χωρίς την έκπτωση.");
-        return;
-      }
-      setCheckoutError(
-        describeError(error, {
-          400: "Κάποιο πιάτο δεν είναι πια διαθέσιμο. Αφαίρεσέ το και δοκίμασε ξανά.",
-          ...paymentErrors,
-        }),
-      );
+      handleOrderError(error);
       if (orderId) loadOrders();
       setPlacing(null);
     }
@@ -204,16 +234,7 @@ export function OrdersScreen() {
       });
       loadOrders();
     } catch (error) {
-      if (error instanceof ApiError && /gym/i.test(error.message)) {
-        clearGym();
-        setCheckoutError("Ο κωδικός του γυμναστηρίου δεν ισχύει πια — η παραγγελία μπορεί να γίνει κανονικά, χωρίς την έκπτωση.");
-        return;
-      }
-      setCheckoutError(
-        describeError(error, {
-          400: "Κάποιο πιάτο δεν είναι πια διαθέσιμο. Αφαίρεσέ το και δοκίμασε ξανά.",
-        }),
-      );
+      handleOrderError(error);
     } finally {
       setPlacing(null);
     }

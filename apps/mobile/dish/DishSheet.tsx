@@ -19,7 +19,8 @@ export function DishSheetProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={open}>
       {children}
-      <DishSheet item={item} onClose={() => setItem(null)} />
+      {/* keyed by dish: quantity starts at 1 for every dish opened */}
+      <DishSheet key={item?.id ?? "none"} item={item} onClose={() => setItem(null)} />
     </Ctx.Provider>
   );
 }
